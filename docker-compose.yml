@@ -1,0 +1,73 @@
+x-app-vars: &abelo-app-vars
+  DEBUG_MODE: ${DEBUG_MODE:-True}
+  DB_PORT_EXTERNAL: ${DB_PORT_EXTERNAL:-5434}
+  SECRET_KEY_FILE: "/run/secrets/secret_key"
+  SESSION_MIDDLEWARE_SECRET_KEY_FILE: "/run/secrets/session_middleware_secret_key"
+
+x-db-vars: &abelo-db-vars
+  POSTGRES_USER: ${DB_USER:-admin}
+  POSTGRES_DB: ${DB_NAME:-abelo_db}
+  POSTGRES_PASSWORD_FILE: "/run/secrets/db_password"
+
+services:
+  abelo-app:
+    container_name: abelo-app
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    volumes:
+      - ./backend/:/opt/abelo/backend/
+    ports:
+      - "8000:8000"
+    environment:
+      <<: [*abelo-app-vars, *abelo-db-vars]
+    env_file:
+      - .env
+    secrets:
+      - db_password
+      - secret_key
+      - session_middleware_secret_key
+    depends_on:
+      abelo-db:
+        condition: service_healthy
+    networks:
+      - abelo_network
+    restart: unless-stopped
+
+  abelo-db:
+    container_name: abelo-db
+    image: postgres:18
+    environment:
+      <<: *abelo-db-vars
+    volumes:
+      - pg_data:/var/lib/postgresql/18/docker
+    env_file:
+      - .env
+    secrets:
+      - db_password
+    ports:
+      - "${DB_PORT_EXTERNAL:-5434}:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - abelo_network
+    restart: unless-stopped
+
+volumes:
+  pg_data:
+    driver: local
+
+networks:
+  abelo_network:
+    driver: bridge
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+  secret_key:
+    file: ./secrets/secret_key.txt
+  session_middleware_secret_key:
+    file: ./secrets/session_middleware_secret_key.txt
