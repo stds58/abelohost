@@ -5,7 +5,7 @@
 import os
 from functools import lru_cache
 
-from pydantic import ConfigDict, Field
+from pydantic import ConfigDict
 from pydantic_settings import BaseSettings
 
 
@@ -34,7 +34,6 @@ class Settings(BaseSettings):
     POSTGRES_USER: str
     POSTGRES_PASSWORD_FILE: str = ""
     POSTGRES_DB: str
-    DB_PORT_EXTERNAL: int
 
     @property
     def SECRET_KEY(self) -> str:

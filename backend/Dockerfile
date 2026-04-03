@@ -14,22 +14,37 @@ FROM python:3.13-slim
 
 ARG WORKDIR=/opt/abelo
 ARG USER=appuser
+ARG UID=1000
+ARG GID=1000
 
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+# Создаем непривилегированного пользователя БЕЗ доступа к shell
+# --no-create-home: нам не нужен home dir, мы работаем в WORKDIR
+# --shell /sbin/nologin: защита от интерактивного входа
+RUN groupadd --gid ${GID} ${USER} \
+    && useradd --uid ${UID} --gid ${GID} --no-create-home --shell /sbin/nologin ${USER}
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=${WORKDIR} \
+    WORKDIR=${WORKDIR} \
+    PATH="${WORKDIR}/.venv/bin:$PATH"
 
 WORKDIR $WORKDIR
 
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY --from=builder $WORKDIR/.venv $WORKDIR/.venv
-ENV PATH="$WORKDIR/.venv/bin:$PATH"
 
-RUN useradd -m appuser
+COPY backend/entrypoint.sh ${WORKDIR}/entrypoint.sh
 
-COPY ./backend ./backend
+RUN chmod +x ${WORKDIR}/entrypoint.sh \
+    && chown ${UID}:${GID} ${WORKDIR}/entrypoint.sh \
+    && mkdir -p ${WORKDIR}/.cache ${WORKDIR}/tmp /tmp /run \
+    && chown -R ${UID}:${GID} ${WORKDIR} \
+    && chmod 1777 /tmp \
+    && chmod 755 /run
 
-COPY backend/entrypoint.sh /opt/abelo/backend/entrypoint.sh
-RUN chmod +x /opt/abelo/backend/entrypoint.sh
-
-USER appuser
+USER ${UID}:${GID}
 
 ENTRYPOINT ["/opt/abelo/backend/entrypoint.sh"]

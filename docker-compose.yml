@@ -1,6 +1,5 @@
 x-app-vars: &abelo-app-vars
   DEBUG_MODE: ${DEBUG_MODE:-True}
-  DB_PORT_EXTERNAL: ${DB_PORT_EXTERNAL:-5434}
   SECRET_KEY_FILE: "/run/secrets/secret_key"
   SESSION_MIDDLEWARE_SECRET_KEY_FILE: "/run/secrets/session_middleware_secret_key"
 
@@ -9,14 +8,44 @@ x-db-vars: &abelo-db-vars
   POSTGRES_DB: ${DB_NAME:-abelo_db}
   POSTGRES_PASSWORD_FILE: "/run/secrets/db_password"
 
+x-security-defaults: &security-defaults
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  cap_add: []
+  read_only: true
+  tmpfs:
+    - /tmp:size=64m,mode=1777
+    - /run:size=32m,mode=755
+  ulimits:
+    nproc: 512
+    nofile:
+      soft: 4096
+      hard: 8192
+  deploy:
+    resources:
+      limits:
+        cpus: '1.0'
+        memory: 512M
+      reservations:
+        cpus: '0.25'
+        memory: 128M
+
 services:
   abelo-app:
     container_name: abelo-app
     build:
       context: .
       dockerfile: backend/Dockerfile
+    <<: *security-defaults
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
     volumes:
-      - ./backend/:/opt/abelo/backend/
+      - ./backend/:/opt/abelo/backend/:ro
+      - app-cache:/opt/abelo/.cache
     ports:
       - "8000:8000"
     environment:
@@ -27,6 +56,12 @@ services:
       - db_password
       - secret_key
       - session_middleware_secret_key
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     depends_on:
       abelo-db:
         condition: service_healthy
@@ -37,16 +72,43 @@ services:
   abelo-db:
     container_name: abelo-db
     image: postgres:18
+    <<: *security-defaults
+    cap_add:
+      - CHOWN           # Смена владельца файлов
+      - FOWNER          # Игнорирование проверки владельца при установке прав
+      - DAC_OVERRIDE    # Игнорирование ограничений прав доступа (критично для initdb на ro fs)
+      - SETUID          # Переключение пользователя
+      - SETGID          # Переключение группы
+      - KILL            # Для корректного завершения процессов
     environment:
       <<: *abelo-db-vars
+      # Настройки PostgreSQL для ограничения ресурсов
+      PGDATA: /var/lib/postgresql/data
     volumes:
-      - pg_data:/var/lib/postgresql/18/docker
+      - pg_data:/var/lib/postgresql/18/data
+
+      # [1] TMPFS для критически важных writable директорий
+      # /dev/shm нужен для shared memory PostgreSQL
+      - type: tmpfs
+        target: /dev/shm
+        tmpfs:
+          size: 104857600 # 100MB
+        # /run/postgresql для сокетов
+      - type: tmpfs
+        target: /run/postgresql
+        tmpfs:
+          mode: 1777
+          size: 10485760 # 10MB
+      # /tmp для временных файлов
+      - type: tmpfs
+        target: /tmp
+        tmpfs:
+          mode: 1777
+          size: 104857600 # 100MB
     env_file:
       - .env
     secrets:
       - db_password
-    ports:
-      - "${DB_PORT_EXTERNAL:-5434}:5432"
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB" ]
       interval: 5s
@@ -55,9 +117,19 @@ services:
     networks:
       - abelo_network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 256M
 
 volumes:
   pg_data:
+    driver: local
+  app-cache:
     driver: local
 
 networks:
