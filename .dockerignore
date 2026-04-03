@@ -1,0 +1,11 @@
+**/__pycache__
+.venv
+.ruff_cache
+.github
+.env
+.git
+.dockerignore
+.pylintrc
+.gitignore
+example.env
+docker-compose.yml
