@@ -45,6 +45,7 @@ services:
       - SETUID
     volumes:
       - ./backend/:/opt/abelo/backend/:ro
+      - ./backend/alembic/versions/:/opt/abelo/backend/alembic/versions/:rw
       - app-cache:/opt/abelo/.cache
     ports:
       - "8000:8000"
