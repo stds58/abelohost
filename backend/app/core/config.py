@@ -4,6 +4,7 @@
 
 import os
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic import ConfigDict
 from pydantic_settings import BaseSettings
@@ -14,10 +15,10 @@ def _read_secret_file(file_path: str) -> str:
     if not file_path:
         return ""
     try:
-        with open(file_path, 'r') as f:
+        with Path(file_path).open("r", encoding="utf-8") as f:
             return f.read().strip()
-    except FileNotFoundError:
-        raise RuntimeError(f"Secret file not found: {file_path}")
+    except FileNotFoundError as err:
+        raise RuntimeError(f"Secret file not found: {file_path}") from err
 
 
 class Settings(BaseSettings):
@@ -36,19 +37,16 @@ class Settings(BaseSettings):
     POSTGRES_DB: str
 
     @property
-    def SECRET_KEY(self) -> str:
+    def SECRET_KEY(self) -> str:  # pylint: disable=invalid-name
         return _read_secret_file(self.SECRET_KEY_FILE)
 
     @property
-    def SESSION_MIDDLEWARE_SECRET_KEY(self) -> str:
+    def SESSION_MIDDLEWARE_SECRET_KEY(self) -> str:  # pylint: disable=invalid-name
         return _read_secret_file(self.SESSION_MIDDLEWARE_SECRET_KEY_FILE)
 
     @property
-    def POSTGRES_PASSWORD(self) -> str:
-        # Если задан файл секрета, читаем его. Иначе можно попробовать взять из env POSTGRES_PASSWORD, если нужно
-        if self.POSTGRES_PASSWORD_FILE:
-            return _read_secret_file(self.POSTGRES_PASSWORD_FILE)
-        return ""
+    def POSTGRES_PASSWORD(self) -> str:  # pylint: disable=invalid-name
+        return _read_secret_file(self.POSTGRES_PASSWORD_FILE)
 
     @property
     def DB_HOST(self):  # pylint: disable=invalid-name

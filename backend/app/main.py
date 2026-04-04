@@ -2,9 +2,9 @@ from fastapi import Depends, FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
-from backend.app.core.config import settings
-from backend.app.db.deps import connection
 
+from backend.app.api.v1.router import api_router
+from backend.app.db.deps import connection
 
 app = FastAPI(
     debug=True,
@@ -35,6 +35,7 @@ app.add_middleware(
     ],
 )
 
+app.include_router(api_router, prefix="/api/v1")
 
 
 @app.get("/health", status_code=status.HTTP_200_OK)
@@ -43,12 +44,7 @@ def healthcheck():
     проверка доступности сервиса
     :return:
     """
-    if settings.DEBUG_MODE:
-        return {
-            "message": "Fastapi is running",
-            "DEBUG_MODE": settings.DEBUG_MODE,
-        }
-    return {"message": "Fastapi is running"}
+    return {"status": "healthy"}
 
 
 @app.get("/db-info")
@@ -111,4 +107,3 @@ if __name__ == "__main__":
             file=sys.stderr,
         )
         sys.exit(1)
-
