@@ -14,7 +14,6 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 def create_session_factory(database_url: str):
     """Создает фабрику сессий для заданного URL базы данных"""
-    # engine = create_async_engine(database_url)
     engine = create_async_engine(
         database_url,
         pool_size=13,  # 13 количество соединений в пуле
@@ -29,14 +28,12 @@ def create_session_factory(database_url: str):
 
 
 @asynccontextmanager
-async def get_session_with_isolation(session_factory):
+async def get_session(session_factory):
     """
-    Асинхронный контекстный менеджер для получения сессии c заданным уровнем изоляции.
+    Асинхронный контекстный менеджер для получения сессии.
 
     Args:
         session_factory: Фабрика для создания асинхронной сессии.
-        isolation_level: Уровень изоляции транзакции (например, "READ COMMITTED").
-                         Если None, используется уровень по умолчанию.
 
     Yields:
         AsyncSession: Асинхронная сессия SQLAlchemy.

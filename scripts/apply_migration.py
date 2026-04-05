@@ -9,7 +9,7 @@ def run_cmd(cmd):
 
 if __name__ == "__main__":
     container_cmd = "cd backend && alembic upgrade head"
-    full_cmd = f'docker exec -i preview-fastapi-app bash -c "{container_cmd}"'
+    full_cmd = f'docker exec -i abelo-app bash -c "{container_cmd}"'
 
     try:
         run_cmd(full_cmd)

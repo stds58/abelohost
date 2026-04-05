@@ -1,18 +1,19 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
-
-# Импортируем наш Value Object, чтобы Pydantic знал, какего валидировать
-# благодаря методу __get_pydantic_core_schema__ в классе MessageId
+from pydantic import BaseModel, Field
 
 
-class MessageCreateRequest(BaseModel):
+class ProcessRequest(BaseModel):
     """Схема для создания сообщения (POST /message)"""
 
-    model_config = ConfigDict(json_schema_extra={"examples": [{"text": "some text"}]})
+    data: str
 
-    text: str = Field(..., min_length=1, max_length=5000, description="Текст сообщения")
+
+class ProcessResponse(BaseModel):
+    processed: bool = Field(..., examples=[True])
+    echo: str = Field(..., examples=["test data"])
+    length: int = Field(..., examples=[9])
 
 
 class MessageResponse(BaseModel):

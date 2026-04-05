@@ -51,7 +51,7 @@ class SQLAlchemyMessageRepository(MessageRepository):
             ) from e
 
 
-def get_sqlalchemy_message_repository(
+def create_sqlalchemy_message_repository(
     session: AsyncSession,
 ) -> SQLAlchemyMessageRepository:
     return SQLAlchemyMessageRepository(session=session)

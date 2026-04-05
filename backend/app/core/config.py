@@ -60,6 +60,13 @@ class Settings(BaseSettings):
         )
 
     @property
+    def DATABASE_URL_FOR_ASYNCPG(self) -> str:  # pylint: disable=invalid-name
+        return (
+            f"postgresql://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@"
+            f"{self.DB_HOST}:5432/{self.POSTGRES_DB}"
+        )
+
+    @property
     def BACKEND_WORKERS(self) -> int:  # pylint: disable=invalid-name
         """количество ядер=количество воркеров граниана"""
         workers = os.cpu_count()

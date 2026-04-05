@@ -1,14 +1,37 @@
+from contextlib import asynccontextmanager
+
+import asyncpg
 from fastapi import Depends, FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
+from prometheus_fastapi_instrumentator import Instrumentator
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.api.v1.router import api_router
-from backend.app.db.deps import connection
+from backend.app.core.config import settings
+from backend.app.db.asyncpg_pool import asyncpg_db_client
+from backend.app.db.deps import (
+    connection_asyncpg_dependency,
+    connection_sqlalchemy_dependency,
+)
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    print("Приложение запускается...")
+
+    await asyncpg_db_client.connect(
+        dsn=settings.DATABASE_URL_FOR_ASYNCPG, min_size=10, max_size=30
+    )
+    yield
+
+    print("Приложение завершается...")
+    await asyncpg_db_client.disconnect()
+
 
 app = FastAPI(
     debug=True,
-    # lifespan=lifespan,
+    lifespan=lifespan,
     title="API",
     version="0.1.0",
     docs_url="/api/docs",
@@ -16,6 +39,7 @@ app = FastAPI(
     openapi_url="/api/openapi.json",
 )
 
+Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
 app.add_middleware(
     CORSMiddleware,
@@ -35,7 +59,7 @@ app.add_middleware(
     ],
 )
 
-app.include_router(api_router, prefix="/api/v1")
+app.include_router(api_router)
 
 
 @app.get("/health", status_code=status.HTTP_200_OK)
@@ -47,9 +71,9 @@ def healthcheck():
     return {"status": "healthy"}
 
 
-@app.get("/db-info")
+@app.get("/check_sqlalchemy_db-info")
 async def get_db_info(
-    session: AsyncSession = Depends(connection(commit=False)),
+    session: AsyncSession = Depends(connection_sqlalchemy_dependency(commit=False)),
 ):
     """
     Возвращает информацию o текущем подключении к БД.
@@ -60,6 +84,28 @@ async def get_db_info(
     row = result.fetchone()
     if row:
         current_user, version, now = row
+        return {
+            "db_user": current_user,
+            "db_version": version,
+            "current_time": now.isoformat(),
+        }
+    return {"error": "No data"}
+
+
+@app.get("/check_asyncpg_db-info")
+async def get_db_info_asyncpg(
+    conn: asyncpg.Connection = Depends(connection_asyncpg_dependency()),
+):
+    """
+    Возвращает информацию o текущем подключении к БД через asyncpg.
+    """
+    row = await conn.fetchrow("SELECT CURRENT_USER, VERSION(), NOW()")
+
+    if row:
+        current_user = row["current_user"]
+        version = row["version"]
+        now = row["now"]
+
         return {
             "db_user": current_user,
             "db_version": version,

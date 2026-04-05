@@ -21,6 +21,7 @@ main = [
     "granian>=2.7.2",
     "itsdangerous>=2.2.0",
     "orjson>=3.11.8",
+    "prometheus-fastapi-instrumentator>=7.1.0",
     "pydantic-settings>=2.13.1",
     "requests>=2.33.1",
     "sqlalchemy>=2.0.49",
@@ -110,7 +111,7 @@ max-line-length = 88
 
 [tool.pylint.'MASTER']
 init-hook = 'import sys; sys.path.append(".")'
-extension-pkg-allow-list = ["pydantic"]
+extension-pkg-allow-list = ["pydantic", "orjson"]
 ignore-paths = [
   ".*/tests/.*",
   ".*/test_.*\\.py",

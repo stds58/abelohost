@@ -1,4 +1,6 @@
-from uuid_extensions import uuid7  # или используй uuid.uuid4()
+import asyncio
+
+from uuid_extensions import uuid7
 
 from backend.app.application.repositories.message import MessageRepository
 from backend.app.domain.entities.message import Message
@@ -7,7 +9,7 @@ from backend.app.domain.value_objects.message import MessageId
 
 class CreateMessageUseCase:
     """
-    Сценарий: Создать новое сообщение.
+    Сценарий: Создать новое сообщение + Симуляция обработки данных c фиксированной задержкой.
 
     Отвечает за:
     1. Генерацию уникального идентификатора
@@ -32,6 +34,10 @@ class CreateMessageUseCase:
             EmptyTextError: Если текст пустой или содержит только пробелы
             MessageError: Если сообщение c таким ID уже существует (маловероятно для uuid7)
         """
+
+        # Симуляция latency
+        await asyncio.sleep(0.5)
+
         # 1. Генерируем уникальный ID (uuid7 = время-сортируемый UUID)
         # Можно использовать uuid.uuid4() если не нужна сортировка по времени
         new_id = MessageId.from_str(str(uuid7()))
@@ -44,6 +50,8 @@ class CreateMessageUseCase:
         # 3. Сохраняем через репозиторий
         # Репозиторий выбросит исключение, если нарушена уникальность
         await self._repository.save(message)
+
+        print(f"message {message}")
 
         # 4. Возвращаем созданную сущность
         return message

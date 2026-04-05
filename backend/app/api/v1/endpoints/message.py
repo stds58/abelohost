@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+import orjson
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from backend.app.api.v1.deps import (
-    get_create_message_use_case,
-    get_get_message_use_case,
+    get_sqlalchemy_repository_read,
+    get_sqlalchemy_repository_write,
 )
-from backend.app.api.v1.schemas.message import MessageCreateRequest, MessageResponse
+from backend.app.api.v1.schemas.message import MessageResponse, ProcessRequest
 from backend.app.application.use_cases.create_message import CreateMessageUseCase
 from backend.app.application.use_cases.get_message import GetMessageUseCase
 from backend.app.domain.exceptions.message import (
@@ -17,24 +18,27 @@ router = APIRouter()
 
 
 @router.post(
-    "",
-    response_model=MessageResponse,
+    "/process",
+    # response_model=ProcessResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Создать новое сообщение",
-    description="Создает сообщение c валидацией текста и генерацией UUID7",
+    summary="Обработать данные c задержкой",
+    description="Принимает JSON {data: str}, имитирует обработку (0.5s) и возвращает echo",
 )
 async def create_message(
-    body: MessageCreateRequest,
-    use_case: CreateMessageUseCase = Depends(get_create_message_use_case),
+    request: ProcessRequest,
+    repo: CreateMessageUseCase = Depends(get_sqlalchemy_repository_write),
 ):
     """
     Принимает текст, создает доменную сущность и сохраняет в БД.
+    Симуляция обработки данных c фиксированной задержкой.
     """
     try:
-        # Execute возвращает доменную сущность Message
-        message = await use_case.execute(text=body.text)
-        # Конвертируем доменную сущность в DTO для ответа
-        return MessageResponse.from_domain(message)
+        use_case = CreateMessageUseCase(repository=repo)
+        message = await use_case.execute(text=request.data)
+
+        return Response(
+            content=orjson.dumps(message.to_dict()), media_type="application/json"
+        )
 
     except EmptyTextError:
         raise HTTPException(
@@ -49,20 +53,20 @@ async def create_message(
 
 
 @router.get(
-    "/{message_id}",
+    "/message/{message_id}",
     response_model=MessageResponse,
     summary="Получить сообщение по ID",
     description="Возвращает сообщение, если оно существует",
 )
 async def get_message(
     message_id: str,
-    # Pydantic сам попробует сконвертировать это в MessageId внутри UseCase, но здесь оставляем str для гибкости обработки ошибок URL
-    use_case: GetMessageUseCase = Depends(get_get_message_use_case),
+    repo: GetMessageUseCase = Depends(get_sqlalchemy_repository_read),
 ):
     """
     Получает сообщение по UUID.
     """
     try:
+        use_case = GetMessageUseCase(repository=repo)
         message = await use_case.execute(message_id=message_id)
         return MessageResponse.from_domain(message)
 

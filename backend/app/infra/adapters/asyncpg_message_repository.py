@@ -4,10 +4,8 @@ asyncpg адаптер для репозиториев Message.
 """
 
 import asyncpg
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.application.repositories.message import MessageRepository
-from backend.app.db.asyncpg_pool import asyncpg_db_client
 from backend.app.domain.entities.message import Message as MessageDomain
 from backend.app.domain.exceptions.message import MessageError
 from backend.app.domain.value_objects.message import MessageId
@@ -18,8 +16,8 @@ class AsyncpgMessageRepository(MessageRepository):
     Реализация MessageRepository c использованием asyncpg.
     """
 
-    def __init__(self, session: AsyncSession):
-        self._session = session
+    def __init__(self, conn: asyncpg.Connection):
+        self._conn = conn
 
     async def get_by_id(self, message_id: MessageId) -> MessageDomain | None:
         """
@@ -27,7 +25,7 @@ class AsyncpgMessageRepository(MessageRepository):
         :param message_id:
         :return:
         """
-        async with asyncpg_db_client.get_connection() as conn:
+        async with self._conn.get_connection() as conn:
             row = await conn.fetchrow(
                 """
                         SELECT id,
@@ -58,7 +56,7 @@ class AsyncpgMessageRepository(MessageRepository):
         :param message:
         :return:
         """
-        async with asyncpg_db_client.get_connection() as conn:
+        async with self._conn.get_connection() as conn:
             try:
                 await conn.execute(
                     "INSERT INTO messages (id, created_at, text) VALUES ($1, $2, $3)",
@@ -72,7 +70,10 @@ class AsyncpgMessageRepository(MessageRepository):
                 ) from e
 
 
-def get_asyncpg_message_repository(
-    session: AsyncSession,
+def create_asyncpg_message_repository(
+    conn: asyncpg.Connection,
 ) -> AsyncpgMessageRepository:
-    return AsyncpgMessageRepository(session=session)
+    """
+    Простая фабрика для создания репозитория.
+    """
+    return AsyncpgMessageRepository(conn=conn)
