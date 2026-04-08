@@ -14,6 +14,7 @@ from backend.app.domain.value_objects.message import MessageId
 class AsyncpgMessageRepository(MessageRepository):
     """
     Реализация MessageRepository c использованием asyncpg.
+    Принимает уже открытое соединение (Connection) из DI.
     """
 
     def __init__(self, conn: asyncpg.Connection):
@@ -25,19 +26,14 @@ class AsyncpgMessageRepository(MessageRepository):
         :param message_id:
         :return:
         """
-        async with self._conn.get_connection() as conn:
-            row = await conn.fetchrow(
-                """
-                        SELECT id,
-                               created_at,
-                               text::TEXT AS text
-                        FROM messages
-                        WHERE id = $1
-                    """,
-                message_id.value,
-            )
-
-            print("row ===== ", row)
+        row = await self._conn.fetchrow(
+            """
+            SELECT id, created_at, text::TEXT AS text
+            FROM messages
+            WHERE id = $1
+            """,
+            message_id.value,
+        )
 
         if not row:
             return None
@@ -56,18 +52,18 @@ class AsyncpgMessageRepository(MessageRepository):
         :param message:
         :return:
         """
-        async with self._conn.get_connection() as conn:
-            try:
-                await conn.execute(
-                    "INSERT INTO messages (id, created_at, text) VALUES ($1, $2, $3)",
-                    message.id.value,
-                    message.created_at,
-                    message.text.value,
-                )
-            except asyncpg.exceptions.UniqueViolationError as e:
-                raise MessageError(
-                    f"Message with id {message.id.value} already exists"
-                ) from e
+        try:
+            # Используем self._conn напрямую
+            await self._conn.execute(
+                "INSERT INTO messages (id, created_at, text) VALUES ($1, $2, $3)",
+                message.id.value,
+                message.created_at,
+                message.text.value,
+            )
+        except asyncpg.exceptions.UniqueViolationError as e:
+            raise MessageError(
+                f"Message with id {message.id.value} already exists"
+            ) from e
 
 
 def create_asyncpg_message_repository(

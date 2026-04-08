@@ -51,7 +51,5 @@ class CreateMessageUseCase:
         # Репозиторий выбросит исключение, если нарушена уникальность
         await self._repository.save(message)
 
-        print(f"message {message}")
-
         # 4. Возвращаем созданную сущность
         return message
