@@ -1,7 +1,8 @@
 x-app-vars: &abelo-app-vars
-  DEBUG_MODE: ${DEBUG_MODE:-True}
+  DEBUG_MODE: ${DEBUG_MODE:-False}
   SECRET_KEY_FILE: "/run/secrets/secret_key"
   SESSION_MIDDLEWARE_SECRET_KEY_FILE: "/run/secrets/session_middleware_secret_key"
+  KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
 
 x-db-vars: &abelo-db-vars
   POSTGRES_USER: ${DB_USER:-admin}
@@ -23,14 +24,6 @@ x-security-defaults: &security-defaults
     nofile:
       soft: 4096
       hard: 8192
-  deploy:
-    resources:
-      limits:
-        cpus: '1.0'
-        memory: 512M
-      reservations:
-        cpus: '0.25'
-        memory: 128M
 
 services:
   abelo-app:
@@ -51,14 +44,14 @@ services:
       - "8000:8000"
     environment:
       <<: [*abelo-app-vars, *abelo-db-vars]
-    env_file:
-      - .env
+#    env_file:
+#      - .env
     secrets:
       - db_password
       - secret_key
       - session_middleware_secret_key
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -66,8 +59,18 @@ services:
     depends_on:
       abelo-db:
         condition: service_healthy
+#      kafka:
+#        condition: service_healthy
     networks:
       - abelo_network
+    deploy:
+      resources:
+        limits:
+          cpus: '6.0'
+          memory: 12G
+        reservations:
+          cpus: '0.25'
+          memory: 128M
     restart: unless-stopped
 
   abelo-db:
@@ -87,6 +90,7 @@ services:
       PGDATA: /var/lib/postgresql/data
     volumes:
       - pg_data:/var/lib/postgresql/18/data
+      - ./postgres_config/postgresql.conf:/etc/postgresql/postgresql.conf
 
       # [1] TMPFS для критически важных writable директорий
       # /dev/shm нужен для shared memory PostgreSQL
@@ -106,6 +110,7 @@ services:
         tmpfs:
           mode: 1777
           size: 104857600 # 100MB
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
     env_file:
       - .env
     secrets:
