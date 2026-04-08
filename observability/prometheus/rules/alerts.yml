@@ -1,0 +1,11 @@
+groups:
+  - name: abelo_alerts
+    rules:
+      - alert: HighRequestLatency
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) > 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High latency on {{ $labels.method }} {{ $labels.handler }}"
+          description: "95th percentile latency is above 1s for more than 1 minute."

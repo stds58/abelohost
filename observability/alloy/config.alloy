@@ -1,0 +1,51 @@
+loki.source.kafka "kafka_logs" {
+  brokers    = ["kafka:9092"]
+  topics     = ["app-logs"]
+  group_id   = "alloy-consumer-group-v11"
+
+  labels = {
+    job    = "abelo-app",
+    source = "kafka",
+  }
+
+  forward_to = [loki.process.add_labels.receiver]
+}
+
+loki.process "add_labels" {
+  stage.static_labels {
+    values = {
+      job       = "abelo-app",
+      source    = "kafka",
+      cluster   = "abelo-cluster",
+      container = "abelo-app",
+    }
+  }
+
+  stage.json {
+    expressions = {
+      level      = "level",
+      request_id = "request_id",
+      event      = "event",
+      timestamp  = "timestamp",
+      service    = "service",
+    }
+  }
+
+  stage.labels {
+    values = {
+      level = "",
+    }
+  }
+
+  forward_to = [loki.write.loki.receiver]
+}
+
+loki.write "loki" {
+  endpoint {
+    url = "http://abelo-loki:3100/loki/api/v1/push"
+  }
+
+  external_labels = {
+    cluster = "abelo-cluster",
+  }
+}

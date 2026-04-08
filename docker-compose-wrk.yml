@@ -1,0 +1,11 @@
+services:
+  load-test:
+    container_name: load-test
+    profiles:
+      - load-test
+    image: williamyeh/wrk
+    command: [ "-t", "6", "-c", "96", "-d", "60s", "--latency", "http://abelo-app:8000/message/069d6138-cbde-740c-8000-f857474225a2" ]
+    depends_on:
+      abelo-app:
+        condition: service_started
+    network_mode: service:abelo-app

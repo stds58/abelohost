@@ -1,0 +1,24 @@
+services:
+  alloy:
+    container_name: abelo-alloy
+    image: grafana/alloy:latest
+    volumes:
+      - ./observability/alloy/config.alloy:/etc/alloy/config.alloy:ro
+    # Если ты убрал loki.source.docker, то сокет монтировать НЕ НАДО.
+    # Если оставил - раскомментируй строку ниже:
+    # - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "12345:12345" # UI Alloy
+    command:
+      - run
+      - /etc/alloy/config.alloy
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/tmp/alloy-data
+    depends_on:
+      kafka:
+        condition: service_healthy
+      loki:
+        condition: service_started
+    networks:
+      - abelo_network
+    restart: unless-stopped

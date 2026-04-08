@@ -1,0 +1,93 @@
+#x-security-defaults: &security-defaults
+#  security_opt:
+#    - no-new-privileges:true
+#  cap_drop:
+#    - ALL
+#  cap_add: []
+#  #read_only: true
+#  tmpfs:
+#    - /tmp:size=64m,mode=1777
+#    - /run:size=32m,mode=755
+#  ulimits:
+#    nproc: 512
+#    nofile:
+#      soft: 4096
+#      hard: 8192
+
+services:
+  kafka:
+    container_name: abelo-kafka
+    image: apache/kafka:3.9.0
+    #<<: *security-defaults
+    # Kafka требует возможности создавать файлы и менять права при инициализации KRaft
+#    cap_add:
+#      - CHOWN
+#      - FOWNER
+#      - DAC_OVERRIDE
+#      - SETUID
+#      - SETGID
+    ports:
+      # Доступен на хосте для отладки (например, через UI или скрипты с хоста)
+      # Внутри сети Docker доступен по имени сервиса 'kafka' на порту 9092
+      - "9092:9092"
+      #- "9093:9093" # JMX Port (опционально, для мониторинга)
+    environment:
+      # --- KRaft Settings ---
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      #KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+
+      # --- Listeners ---
+      # PLAINTEXT: для внутренних соединений (между контейнерами)
+      # EXTERNAL: для доступа с хост-машины (если нужно)
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      # Анонсируем клиентам конкретное имя сервиса в сети Docker
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+
+      # --- Security & Protocol ---
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+
+      # --- Storage & Topics ---
+      KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
+      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk' # Статичный ID обязателен
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true' # Разрешаем авто-создание app-logs
+
+      # --- Performance/Tuning for Dev ---
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+
+      # --- Logs & Retention (для тестов можно уменьшить) ---
+#      KAFKA_LOG_RETENTION_HOURS: 168 #
+#      KAFKA_LOG_SEGMENT_BYTES: 1073741824  #
+#      KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: 300000  #
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    # Tmpfs для временных файлов Kafka, так как root fs read-only
+#    tmpfs:
+#      - /tmp:size=128m,mode=1777
+#      - /opt/kafka/config:size=64m,mode=1777 # Позволяем Kafka писать временные конфиги
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 9092 || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    networks:
+      - abelo_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+volumes:
+  kafka-data:
+    driver: local
