@@ -9,24 +9,38 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.api.v1.router import api_router
 from backend.app.core.config import settings
+from backend.app.core.logging_config import logger as structlog_logger
 from backend.app.db.asyncpg_pool import asyncpg_db_client
 from backend.app.db.deps import (
     connection_asyncpg_dependency,
     connection_sqlalchemy_dependency,
 )
+from backend.app.infra.kafka.kafka_producer import kafka_log_producer
+from backend.app.middleware.logging import structlog_middleware
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    print("Приложение запускается...")
+    structlog_logger.info(
+        "application_startup_started",
+        workers=settings.BACKEND_WORKERS,
+        debug_mode=settings.DEBUG_MODE,
+    )
 
     await asyncpg_db_client.connect(
         dsn=settings.DATABASE_URL_FOR_ASYNCPG, min_size=10, max_size=30
     )
+    structlog_logger.info("database_connected", pool_min=10, pool_max=30)
+
+    kafka_log_producer.start()
+    structlog_logger.info("kafka_connected")
     yield
 
-    print("Приложение завершается...")
+    structlog_logger.info("application_shutdown_started")
+
+    kafka_log_producer.stop()
     await asyncpg_db_client.disconnect()
+    structlog_logger.info("application_stopped")
 
 
 app = FastAPI(
@@ -38,6 +52,9 @@ app = FastAPI(
     redoc_url="/api/redoc",
     openapi_url="/api/openapi.json",
 )
+
+
+app.middleware("http")(structlog_middleware)
 
 Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
@@ -68,7 +85,8 @@ def healthcheck():
     проверка доступности сервиса
     :return:
     """
-    return {"status": "healthy"}
+    structlog_logger.debug("healthcheck_requested")
+    return {"status": "healthy", "DM": settings.DEBUG_MODE}
 
 
 @app.get("/check_sqlalchemy_db-info")

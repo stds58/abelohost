@@ -1,13 +1,11 @@
 import orjson
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 
-from backend.app.api.v1.deps import (
-    get_sqlalchemy_repository_read,
-    get_sqlalchemy_repository_write,
-)
-from backend.app.api.v1.schemas.message import MessageResponse, ProcessRequest
+from backend.app.api.v1.deps import get_asyncpg_repository
+from backend.app.api.v1.schemas.message import ProcessRequest
 from backend.app.application.use_cases.create_message import CreateMessageUseCase
 from backend.app.application.use_cases.get_message import GetMessageUseCase
+from backend.app.core.logging_config import logger as structlog_logger
 from backend.app.domain.exceptions.message import (
     EmptyTextError,
     MessageDoesNotExistError,
@@ -26,7 +24,7 @@ router = APIRouter()
 )
 async def create_message(
     request: ProcessRequest,
-    repo: CreateMessageUseCase = Depends(get_sqlalchemy_repository_write),
+    repo: CreateMessageUseCase = Depends(get_asyncpg_repository),
 ):
     """
     Принимает текст, создает доменную сущность и сохраняет в БД.
@@ -54,22 +52,23 @@ async def create_message(
 
 @router.get(
     "/message/{message_id}",
-    response_model=MessageResponse,
+    # response_model=MessageResponse,
     summary="Получить сообщение по ID",
     description="Возвращает сообщение, если оно существует",
 )
 async def get_message(
     message_id: str,
-    repo: GetMessageUseCase = Depends(get_sqlalchemy_repository_read),
+    repo: GetMessageUseCase = Depends(get_asyncpg_repository),
 ):
     """
     Получает сообщение по UUID.
     """
     try:
+        structlog_logger.info("get_message", message_id=message_id, type="start")
         use_case = GetMessageUseCase(repository=repo)
         message = await use_case.execute(message_id=message_id)
-        return MessageResponse.from_domain(message)
-
+        structlog_logger.info("get_message", message_id=message_id, type="end")
+        return Response(content=message.to_json(), media_type="application/json")
     except MessageIDValueError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
