@@ -23,17 +23,26 @@ from backend.app.middleware.logging import structlog_middleware
 async def lifespan(_app: FastAPI):
     structlog_logger.info(
         "application_startup_started",
-        workers=settings.BACKEND_WORKERS,
+        workers=settings.GRANIAN_WORKERS,
         debug_mode=settings.DEBUG_MODE,
     )
 
-    await asyncpg_db_client.connect(
-        dsn=settings.DATABASE_URL_FOR_ASYNCPG, min_size=10, max_size=30
-    )
-    structlog_logger.info("database_connected", pool_min=10, pool_max=30)
+    try:
+        await asyncpg_db_client.connect(
+            dsn=settings.DATABASE_URL_FOR_ASYNCPG, min_size=10, max_size=80
+        )
+        structlog_logger.info("database_connected", pool_min=10, pool_max=80)
+    except Exception as e:
+        structlog_logger.critical("database_connection_failed", error=str(e))
+        raise SystemExit(1) from e
 
-    kafka_log_producer.start()
-    structlog_logger.info("kafka_connected")
+    try:
+        kafka_log_producer.start()
+        structlog_logger.info("kafka_producer_initialized")
+    except Exception as e:
+        structlog_logger.critical("kafka_initialization_failed", error=str(e))
+        raise SystemExit(1) from e
+
     yield
 
     structlog_logger.info("application_shutdown_started")

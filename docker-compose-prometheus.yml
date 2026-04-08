@@ -1,7 +1,14 @@
+x-security-defaults: &security-defaults
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+
 services:
   prometheus:
     container_name: abelo-prometheus
     image: prom/prometheus:v2.51.0
+    <<: *security-defaults
     ports:
       - "9090:9090"
     volumes:
@@ -11,16 +18,20 @@ services:
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
+      #- '--storage.tsdb.retention.time=15d' # ограничиваем размер WAL, чтобы не забивать диск
     networks:
       - abelo_network
     restart: unless-stopped
     depends_on:
       - node-exporter
-      - abelo-app # Чтобы ждать запуска приложения
+      - abelo-app
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 256M
 
 volumes:
   prometheus-data:

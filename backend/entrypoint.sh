@@ -13,7 +13,7 @@ if [ "${DEBUG_MODE,,}" == "true" ]; then
         --access-log-fmt '[%(time)s] %(addr)s - "%(method)s %(path)s" %(status)d'
     )
 else
-    WORKERS=$(nproc)
+    WORKERS=${GRANIAN_WORKERS:-$(nproc)}
     CMD_ARGS=()
 fi
 

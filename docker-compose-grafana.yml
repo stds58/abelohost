@@ -1,7 +1,14 @@
+x-security-defaults: &security-defaults
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+
 services:
   grafana:
     container_name: abelo-grafana
     image: grafana/grafana:10.4.0
+    <<: *security-defaults
     ports:
       - "3000:3000"
     volumes:
@@ -13,6 +20,9 @@ services:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_USERS_ALLOW_SIGN_UP=false
+      # Опционально: отключаем анонимный доступ и другие лишние функции
+      #- GF_AUTH_ANONYMOUS_ENABLED=false
+      #- GF_INSTALL_PLUGINS= # Пусто, если не нужны дополнительные плагины
     depends_on:
       - prometheus
       - loki
@@ -22,7 +32,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 256M
+          memory: 512M
+        reservations:
+          memory: 128M
 
 volumes:
   grafana-data:

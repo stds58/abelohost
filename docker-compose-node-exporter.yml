@@ -1,7 +1,24 @@
+x-security-defaults: &security-defaults
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  cap_add: []
+  read_only: true
+  tmpfs:
+    - /tmp:size=64m,mode=1777
+    - /run:size=32m,mode=755
+  ulimits:
+    nproc: 512
+    nofile:
+      soft: 4096
+      hard: 8192
+
 services:
   node-exporter:
     container_name: abelo-node-exporter
     image: prom/node-exporter:latest
+    <<: *security-defaults
     ports:
       - "9100:9100"
     volumes:
@@ -12,7 +29,11 @@ services:
       - '--path.procfs=/host/proc'
       - '--path.rootfs=/rootfs'
       - '--path.sysfs=/host/sys'
+      # Исключаем монтирование виртуальных ФС, чтобы не собирать мусор и не нагружать CPU
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+      # Отключаем сборщики, которые могут быть медленными или ненужными в контейнере
+      - '--no-collector.ipvs'
+      - '--no-collector.wifi'
     networks:
       - abelo_network
     restart: unless-stopped

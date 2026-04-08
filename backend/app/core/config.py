@@ -2,7 +2,6 @@
 Класс настроек приложения
 """
 
-import os
 from functools import lru_cache
 from pathlib import Path
 
@@ -30,6 +29,7 @@ class Settings(BaseSettings):
     DEBUG_MODE: bool
     SECRET_KEY_FILE: str = ""
     SESSION_MIDDLEWARE_SECRET_KEY_FILE: str = ""
+    GRANIAN_WORKERS: int
 
     # db
     POSTGRES_USER: str
@@ -67,28 +67,18 @@ class Settings(BaseSettings):
         )
 
     @property
-    def BACKEND_WORKERS(self) -> int:  # pylint: disable=invalid-name
-        """количество ядер=количество воркеров граниана"""
-        workers = os.cpu_count()
-        return workers
-
-    @property
     def DB_POOL_SIZE(self) -> int:  # pylint: disable=invalid-name
         """количество соединений в пуле бд"""
-        connects_in_worker = 100 // self.BACKEND_WORKERS
+        connects_in_worker = 100 // self.GRANIAN_WORKERS
         _pool_size = round(connects_in_worker * 0.8)
         return _pool_size
 
     @property
     def DB_MAX_OVERFLOW(self) -> int:  # pylint: disable=invalid-name
         """количество "переполненных" соединений в бд"""
-        connects_in_worker = 100 // self.BACKEND_WORKERS
+        connects_in_worker = 100 // self.GRANIAN_WORKERS
         _max_overflow = connects_in_worker - self.DB_POOL_SIZE
         return _max_overflow
-
-    @property
-    def NUM_CORES(self) -> int:  # pylint: disable=invalid-name
-        return os.cpu_count()
 
     model_config = ConfigDict(extra="ignore")
 

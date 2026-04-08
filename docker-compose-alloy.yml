@@ -1,12 +1,27 @@
+x-security-defaults: &security-defaults
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  cap_add: []
+  read_only: true
+  tmpfs:
+    - /tmp:size=64m,mode=1777
+    - /run:size=32m,mode=755
+    - /tmp/alloy-data:size=32m,mode=0755
+  ulimits:
+    nproc: 512
+    nofile:
+      soft: 4096
+      hard: 8192
+
 services:
   alloy:
     container_name: abelo-alloy
     image: grafana/alloy:latest
+    <<: *security-defaults
     volumes:
       - ./observability/alloy/config.alloy:/etc/alloy/config.alloy:ro
-    # Если ты убрал loki.source.docker, то сокет монтировать НЕ НАДО.
-    # Если оставил - раскомментируй строку ниже:
-    # - /var/run/docker.sock:/var/run/docker.sock:ro
     ports:
       - "12345:12345" # UI Alloy
     command:

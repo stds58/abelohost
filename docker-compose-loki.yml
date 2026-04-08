@@ -1,7 +1,14 @@
+x-security-defaults: &security-defaults
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+
 services:
   loki:
     container_name: abelo-loki
     image: grafana/loki:3.0.0
+    <<: *security-defaults
     ports:
       - "3100:3100"
     command: -config.file=/etc/loki/local-config.yaml
@@ -15,6 +22,7 @@ services:
       resources:
         limits:
           memory: 1G
+          cpus: '1.0'
 
 volumes:
   loki-data:

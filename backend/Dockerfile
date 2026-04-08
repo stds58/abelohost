@@ -34,7 +34,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder $WORKDIR/.venv $WORKDIR/.venv
-
+COPY backend/ ${WORKDIR}/backend/
 COPY backend/entrypoint.sh ${WORKDIR}/entrypoint.sh
 
 RUN chmod +x ${WORKDIR}/entrypoint.sh \

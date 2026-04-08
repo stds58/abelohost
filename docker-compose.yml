@@ -1,8 +1,9 @@
 x-app-vars: &abelo-app-vars
-  DEBUG_MODE: ${DEBUG_MODE:-False}
+  DEBUG_MODE: ${DEBUG_MODE:-True}
   SECRET_KEY_FILE: "/run/secrets/secret_key"
   SESSION_MIDDLEWARE_SECRET_KEY_FILE: "/run/secrets/session_middleware_secret_key"
   KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+  GRANIAN_WORKERS: ${GRANIAN_WORKERS:-2}
 
 x-db-vars: &abelo-db-vars
   POSTGRES_USER: ${DB_USER:-admin}
@@ -37,15 +38,15 @@ services:
       - SETGID
       - SETUID
     volumes:
-      - ./backend/:/opt/abelo/backend/:ro
-      - ./backend/alembic/versions/:/opt/abelo/backend/alembic/versions/:rw
+      #- ./backend/:/opt/abelo/backend/:ro # в проде убрать,тк На Windows это работает через файловую прослойку (WSL2 gRPC или SMB). Для Python-приложения с тысячами мелких файлов (.py, .pyc) это критически медленно
+      #- ./backend/alembic/versions/:/opt/abelo/backend/alembic/versions/:rw
       - app-cache:/opt/abelo/.cache
     ports:
       - "8000:8000"
     environment:
       <<: [*abelo-app-vars, *abelo-db-vars]
-#    env_file:
-#      - .env
+    env_file:
+      - .env
     secrets:
       - db_password
       - secret_key
@@ -59,8 +60,8 @@ services:
     depends_on:
       abelo-db:
         condition: service_healthy
-#     loki:
-#         condition: service_started
+#      loki:
+#        condition: service_started
 #      kafka:
 #        condition: service_healthy
     networks:
@@ -88,13 +89,12 @@ services:
       - KILL            # Для корректного завершения процессов
     environment:
       <<: *abelo-db-vars
-      # Настройки PostgreSQL для ограничения ресурсов
       PGDATA: /var/lib/postgresql/data
     volumes:
       - pg_data:/var/lib/postgresql/18/data
       - ./postgres_config/postgresql.conf:/etc/postgresql/postgresql.conf
 
-      # [1] TMPFS для критически важных writable директорий
+      # TMPFS для критически важных writable директорий
       # /dev/shm нужен для shared memory PostgreSQL
       - type: tmpfs
         target: /dev/shm
@@ -129,7 +129,7 @@ services:
       resources:
         limits:
           cpus: '2.0'
-          memory: 1G
+          memory: 4G
         reservations:
           cpus: '0.5'
           memory: 256M
