@@ -59,6 +59,8 @@ services:
     depends_on:
       abelo-db:
         condition: service_healthy
+#     loki:
+#         condition: service_started
 #      kafka:
 #        condition: service_healthy
     networks:
