@@ -8,7 +8,6 @@ ENV PATH="$WORKDIR/.venv/bin:$PATH"
 
 COPY ../pyproject.toml .
 RUN uv sync --group main
-#RUN uv sync --group main --group linter
 
 FROM python:3.13-slim
 
