@@ -1,0 +1,27 @@
+x-security-defaults: &security-defaults
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  cap_add: []
+  tmpfs:
+    - /tmp:size=64m,mode=1777
+
+services:
+  statsd-exporter:
+    container_name: abelo-statsd-exporter
+    image: prom/statsd-exporter:latest
+    <<: *security-defaults
+    command:
+      - "--statsd.listen-udp=:8125"
+      - "--web.listen-address=:9102"
+      - "--statsd.mapping-config=/etc/statsd-exporter/mapping.yaml"
+    volumes:
+      - ./observability/statsd/mapping.yaml:/etc/statsd-exporter/mapping.yaml:ro
+    networks:
+      - abelo_network
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.2'

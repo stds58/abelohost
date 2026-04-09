@@ -5,6 +5,7 @@ COMPOSE_FILES=(
     "docker-compose.yml"
     "docker-compose-grafana.yml"
     "docker-compose-loki.yml"
+    "docker-compose-statsd.yml"
     "docker-compose-node-exporter.yml"
     "docker-compose-kafka.yml"
     "docker-compose-alloy.yml"

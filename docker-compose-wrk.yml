@@ -4,7 +4,7 @@ services:
     profiles:
       - load-test
     image: williamyeh/wrk
-    command: [ "-t", "6", "-c", "96", "-d", "60s", "--latency", "http://abelo-app:8000/message/069d6cb6-56ab-7ff8-8000-5e30722611f1" ]
+    command: [ "-t", "6", "-c", "96", "-d", "600s", "--latency", "http://abelo-app:8000/message/069d7707-f1c7-7835-8000-016faf774cf3" ]
     depends_on:
       abelo-app:
         condition: service_started

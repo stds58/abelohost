@@ -23,6 +23,7 @@ services:
     depends_on:
       - node-exporter
       - abelo-app
+      - statsd-exporter
     deploy:
       resources:
         limits:
