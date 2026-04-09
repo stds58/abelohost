@@ -21,10 +21,13 @@ class AsyncpgMessageRepository(MessageRepository):
         self._conn = conn
 
     async def get_by_id(self, message_id: MessageId) -> MessageDomain | None:
-        """
-        используем get_asyncpg_pool
-        :param message_id:
-        :return:
+        """Получает сообщение по ID из базы данных.
+
+        Args:
+            message_id: Идентификатор сообщения.
+
+        Returns:
+            MessageDomain | None: Доменная сущность сообщения или None, если не найдено.
         """
         row = await self._conn.fetchrow(
             """
@@ -47,13 +50,15 @@ class AsyncpgMessageRepository(MessageRepository):
         return MessageDomain.from_dict(data)
 
     async def save(self, message: MessageDomain) -> None:
-        """
+        """Сохраняет новое сообщение в базу данных.
 
-        :param message:
-        :return:
+        Args:
+            message: Доменная сущность сообщения для сохранения.
+
+        Raises:
+            MessageError: Если сообщение c таким ID уже существует.
         """
         try:
-            # Используем self._conn напрямую
             await self._conn.execute(
                 "INSERT INTO messages (id, created_at, text) VALUES ($1, $2, $3)",
                 message.id.value,
@@ -69,7 +74,12 @@ class AsyncpgMessageRepository(MessageRepository):
 def create_asyncpg_message_repository(
     conn: asyncpg.Connection,
 ) -> AsyncpgMessageRepository:
-    """
-    Простая фабрика для создания репозитория.
+    """Простая фабрика для создания репозитория.
+
+    Args:
+        conn: Активное соединение asyncpg.
+
+    Returns:
+        AsyncpgMessageRepository: Экземпляр репозитория.
     """
     return AsyncpgMessageRepository(conn=conn)

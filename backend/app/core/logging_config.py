@@ -1,3 +1,7 @@
+"""
+Конфигурация структурированного логирования через structlog и Kafka.
+"""
+
 import logging
 
 import structlog
@@ -7,16 +11,32 @@ from backend.app.infra.kafka.kafka_producer import kafka_log_producer
 
 
 class DropEvent(BaseException):
+    """Исключение для прерывания цепочки обработки логов structlog."""
+
     pass
 
 
 def kafka_sink_processor(_logger, _method_name, event_dict):
     """
-    Процессор structlog. Отправляет данные в Kafka и ОБРЫВАЕТ цепочку.
-    Ничего не возвращает в stdout.
+    Процессор structlog. Отправляет данные в Kafka и обрывает цепочку.
+    Ничего не возвращает в stdout, предотвращая дублирование логов.
+
+    Args:
+        _logger: Экземпляр логгера (не используется).
+        _method_name: Имя метода логирования (не используется).
+        event_dict: Словарь c данными события лога.
+
+    Raises:
+        structlog.DropEvent: Всегда выбрасывается для предотвращения вывода в stdout.
+
+    Note:
+        Если продюсер Kafka не готов, лог все равно удаляется, чтобы избежать
+        TypeError в PrintLogger из-за неожиданных аргументов.
+        ВАЖНО:
+            Всегда выбрасываем DropEvent, чтобы structlog HE вызывал logger_factory.
+            Это предотвращает TypeError: PrintLogger.msg() got an unexpected keyword argument 'workers'
+
     """
-    # Если продюсер не готов, мы все равно должны дропнуть лог,
-    # чтобы не упала ошибка в PrintLogger из-за kwargs.
     if kafka_log_producer.is_running:
         log_entry = {
             "event": event_dict.get("event"),
@@ -27,59 +47,60 @@ def kafka_sink_processor(_logger, _method_name, event_dict):
         }
         kafka_log_producer.send_log_sync(log_entry)
 
-    # ВАЖНО: Всегда выбрасываем DropEvent, чтобы structlog HE вызывал logger_factory.
-    # Это предотвращает TypeError: PrintLogger.msg() got an unexpected keyword argument 'workers'
     raise structlog.DropEvent
 
 
 def configure_logging() -> None:
     """
-    Настраивает structlog для высоконагруженного продакшена.
-
+    Настраивает structlog для высоконагруженного прода.
     Использует:
-    1. FilteringBoundLogger для мгновенной отсечки ненужных уровней (DEBUG/INFO в проде).
-    2. orjson для сверхбыстрой сериализации в JSON.
-    3. BytesLoggerFactory для записи байтов напрямую в stdout (минуя кодировку str).
-    4. Кэширование логгеров для устранения оверхеда на создание.
+        1. FilteringBoundLogger для мгновенной отсечки ненужных уровней (DEBUG/INFO в проде).
+        2. orjson для сверхбыстрой сериализации в JSON.
+        3. Кэширование логгеров для устранения оверхеда на создание.
+
+    Returns:
+        None: Функция настраивает глобальное состояние structlog и ничего не возвращает.
+
+    Note:
+        Конфигурация применяется глобально. После вызова этой функции менять настройки
+        structlog нельзя без перезапуска процесса (в Docker контейнер перезапускается).
+        Логи направляются исключительно в Kafka через kafka_sink_processor, вывод в stdout
+        отключен выбросом DropEvent.
+
+        - structlog.contextvars.merge_contextvars Добавляет контекстные переменные
+          (например, request_id из middleware)
+        - structlog.processors.add_log_level Добавляет уровень логирования в вывод
+        - structlog.processors.format_exc_info Форматирует исключения (traceback) в поле 'exception'
+        - structlog.processors.TimeStamper(fmt="iso", utc=True) Добавляет timestamp в формате ISO 8601 (UTC)
+        - structlog.processors.JSONRenderer(serializer=orjson.dumps)
+          Рендер в JSON c помощью orjson.dumps, возвращает bytes
+
+        Важно:
+        - cache_logger_on_first_use=True обеспечивает кэширование логгеров после первого использования.
+        - wrapper_class=structlog.make_filtering_bound_logger(log_level) обеспечивает нулевую стоимость
+          пропущенных логов (если уровень ниже установленного).
+        - logger_factory=structlog.PrintLoggerFactory() Пишет байты напрямую в stdout
+        - context_class=dict Стандартный класс логгера
     """
 
-    # Определяем уровень логирования из настроек
     log_level = logging.DEBUG if settings.DEBUG_MODE else logging.INFO
 
     structlog.configure(
-        # 1. Кэширование: создает логгер один раз, далее использует ссылку.
-        # Важно: после вызова configure() менять настройки нельзя (но в Docker контейнер перезапускается).
         cache_logger_on_first_use=True,
-        # 2. Wrapper Class: Самый быстрый способ фильтрации.
-        # Если уровень ниже log_level, метод просто возвращает None.
         wrapper_class=structlog.make_filtering_bound_logger(log_level),
         processors=[
-            # Добавляет контекстные переменные (например, request_id из middleware)
             structlog.contextvars.merge_contextvars,
-            # Добавляет уровень логирования в вывод
             structlog.processors.add_log_level,
-            # Форматирует исключения (traceback) в поле 'exception'
             structlog.processors.format_exc_info,
-            # Добавляет timestamp в формате ISO 8601 (UTC)
             structlog.processors.TimeStamper(fmt="iso", utc=True),
             kafka_sink_processor,
-            # 3. Рендеринг в JSON c помощью orjson
-            # orjson.dumps возвращает bytes, что идеально для BytesLoggerFactory
             # structlog.processors.JSONRenderer(serializer=orjson.dumps),
         ],
-        # 4. Factory: Пишет байты напрямую в stdout.
-        # Это быстрее, чем TextIOWrapper, так как avoids extra encoding steps.
         # logger_factory=structlog.BytesLoggerFactory(),
         logger_factory=structlog.PrintLoggerFactory(),
-        # Стандартный класс логгера (не используется при wrapper_class выше, но good to have)
         context_class=dict,
     )
 
 
-# Вызываем конфигурацию сразу при импорте модуля,
-# либо можно вызывать явно в main.py перед созданием app.
-# Для надежности лучше вызывать явно в lifespan, но для structlog часто достаточно раннего импорта.
 configure_logging()
-
-# Экспортируем готовый к использованию логгер для удобства импорта в других модулях
 logger = structlog.get_logger()

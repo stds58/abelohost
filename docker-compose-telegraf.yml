@@ -1,0 +1,32 @@
+#x-security-defaults: &security-defaults
+#  security_opt:
+#    - no-new-privileges:true
+#  cap_drop:
+#    - ALL
+#  cap_add: []
+#  read_only: true
+#  tmpfs:
+#    - /tmp:size=64m,mode=1777
+#    - /run:size=32m,mode=755
+#  ulimits:
+#    nproc: 512
+#    nofile:
+#      soft: 4096
+#      hard: 8192
+# wsl ./start.sh up -d --force-recreate telegraf
+
+
+services:
+  telegraf:
+    image: telegraf:1.38.2-alpine
+    container_name: telegraf
+    restart: unless-stopped
+    ports:
+      - "9273:9273"
+    volumes:
+      - ./telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - //var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - abelo_network
+    group_add:
+      - "1001"

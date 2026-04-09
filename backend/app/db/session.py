@@ -1,6 +1,5 @@
 """
-Контекстный менеджер для создания сессии c опциональным уровнем изоляции.
-Для гибкого управления уровнем изоляции
+Контекстный менеджер для создания сессии
 """
 
 from contextlib import asynccontextmanager
@@ -15,11 +14,22 @@ from backend.app.core.config import settings
 
 
 def create_session_factory(database_url: str):
-    """Создает фабрику сессий для заданного URL базы данных"""
+    """Создает фабрику сессий для заданного URL базы данных.
+
+    Args:
+        database_url: URL подключения к базе данных.
+
+    Returns:
+        async_sessionmaker: Фабрика для создания асинхронных сессий.
+
+    Notes:
+        pool_size количество соединений в пуле
+        max_overflow количество "переполненных" соединений
+    """
     engine = create_async_engine(
         database_url,
-        pool_size=settings.DB_POOL_SIZE,  # количество соединений в пуле
-        max_overflow=settings.DB_MAX_OVERFLOW,  # количество "переполненных" соединений
+        pool_size=settings.DB_POOL_SIZE,
+        max_overflow=settings.DB_MAX_OVERFLOW,
         echo=False,
         connect_args={
             "prepared_statement_cache_size": 0,

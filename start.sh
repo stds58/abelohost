@@ -3,13 +3,14 @@
 # Определяем список файлов массивом для читаемости
 COMPOSE_FILES=(
     "docker-compose.yml"
-    "docker-compose-grafana.yml"
-    "docker-compose-loki.yml"
-    "docker-compose-statsd.yml"
-    "docker-compose-node-exporter.yml"
     "docker-compose-kafka.yml"
+    "docker-compose-statsd.yml"
+    "docker-compose-telegraf.yml"
+    "docker-compose-node-exporter.yml"
     "docker-compose-alloy.yml"
     "docker-compose-prometheus.yml"
+    "docker-compose-loki.yml"
+    "docker-compose-grafana.yml"
     "docker-compose-wrk.yml"
 )
 

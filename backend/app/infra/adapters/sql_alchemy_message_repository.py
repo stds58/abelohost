@@ -1,6 +1,5 @@
 """
-PostgreSQL SQLAlchemy адаптеры для репозиториев Message.
-Реализует MessageRepository c использованием SQLAlchemy 2.0 + asyncpg.
+SQLAlchemy адаптер для репозиториев Message.
 """
 
 from sqlalchemy import select
@@ -15,14 +14,24 @@ from backend.app.infra.db.models import Message as ORMMessage
 
 
 class SQLAlchemyMessageRepository(MessageRepository):
-    """
-    Реализация MessageRepository c использованием SQLAlchemy + PostgreSQL.
+    """Реализация MessageRepository c использованием SQLAlchemy + PostgreSQL.
+
+    Args:
+        session: Активная асинхронная сессия SQLAlchemy.
     """
 
     def __init__(self, session: AsyncSession):
         self._session = session
 
     async def get_by_id(self, message_id: MessageId) -> MessageDomain | None:
+        """Получает сообщение по ID через SQLAlchemy ORM.
+
+        Args:
+            message_id: Идентификатор сообщения.
+
+        Returns:
+            MessageDomain | None: Доменная сущность или None.
+        """
         stmt = select(ORMMessage).where(ORMMessage.id == message_id.value)
         result = await self._session.execute(stmt)
         orm_message = result.scalar_one_or_none()
@@ -33,10 +42,13 @@ class SQLAlchemyMessageRepository(MessageRepository):
         return orm_message.to_domain()
 
     async def save(self, message: MessageDomain) -> None:
-        """
-        Сохраняет сообщение
-        :param message:
-        :return:
+        """Сохраняет сообщение через SQLAlchemy ORM.
+
+        Args:
+            message: Доменная сущность сообщения.
+
+        Raises:
+            MessageError: Если нарушено ограничение уникальности (дубликат ID).
         """
         orm_message = ORMMessage(
             id=message.id.value, created_at=message.created_at, text=message.text.value
@@ -54,4 +66,12 @@ class SQLAlchemyMessageRepository(MessageRepository):
 def create_sqlalchemy_message_repository(
     session: AsyncSession,
 ) -> SQLAlchemyMessageRepository:
+    """Фабрика для создания SQLAlchemy репозитория.
+
+    Args:
+        session: Сессия SQLAlchemy.
+
+    Returns:
+        SQLAlchemyMessageRepository: Экземпляр репозитория.
+    """
     return SQLAlchemyMessageRepository(session=session)

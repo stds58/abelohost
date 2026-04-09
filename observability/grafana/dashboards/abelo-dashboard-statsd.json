@@ -32,7 +32,7 @@
       },
       "id": 10,
       "panels": [],
-      "title": "System & Host Resources (Node Exporter)",
+      "title": "Unified System & Container Resources",
       "type": "row"
     },
     {
@@ -124,12 +124,23 @@
           },
           "editorMode": "code",
           "expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
-          "legendFormat": "{{instance}} - CPU Usage",
+          "legendFormat": "HOST - CPU Usage",
           "range": true,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (container_name) (docker_container_cpu_usage_percent{container_name=~\"$container_filter\"})",
+          "legendFormat": "{{container_name}}",
+          "range": true,
+          "refId": "B"
         }
       ],
-      "title": "Host CPU Usage (%)",
+      "title": "CPU Usage: Host + Selected Containers (%)",
       "type": "timeseries"
     },
     {
@@ -217,12 +228,116 @@
           },
           "editorMode": "code",
           "expr": "node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes",
-          "legendFormat": "{{instance}} - Memory Used",
+          "legendFormat": "HOST - Memory Used",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (container_name) (docker_container_mem_usage{container_name=~\"$container_filter\"})",
+          "legendFormat": "{{container_name}}",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Memory Usage: Host + Selected Containers",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "Bps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 10
+      },
+      "id": 13,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (container_name) (rate(docker_container_net_rx_bytes{container_name=~\"$container_filter\"}[5m]) + rate(docker_container_net_tx_bytes{container_name=~\"$container_filter\"}[5m]))",
+          "legendFormat": "{{container_name}} - Net I/O",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Host Memory Usage",
+      "title": "Network I/O per Selected Container (Rx+Tx)",
       "type": "timeseries"
     },
     {
@@ -231,7 +346,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 10
+        "y": 19
       },
       "id": 20,
       "panels": [],
@@ -297,7 +412,7 @@
         "h": 10,
         "w": 12,
         "x": 0,
-        "y": 11
+        "y": 20
       },
       "id": 1,
       "options": {
@@ -399,7 +514,7 @@
         "h": 10,
         "w": 12,
         "x": 12,
-        "y": 11
+        "y": 20
       },
       "id": 2,
       "options": {
@@ -505,7 +620,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 21
+        "y": 30
       },
       "id": 25,
       "options": {
@@ -545,7 +660,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 30
+        "y": 39
       },
       "id": 30,
       "panels": [],
@@ -561,7 +676,7 @@
         "h": 15,
         "w": 24,
         "x": 0,
-        "y": 31
+        "y": 40
       },
       "id": 4,
       "options": {
@@ -631,6 +746,38 @@
         "skipUrlSync": false,
         "sort": 3,
         "type": "query"
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "definition": "label_values(docker_container_cpu_usage_percent, container_name)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Container Filter",
+        "multi": true,
+        "name": "container_filter",
+        "options": [],
+        "query": {
+          "query": "label_values(docker_container_cpu_usage_percent, container_name)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
       }
     ]
   },
@@ -642,6 +789,7 @@
   "timezone": "browser",
   "title": "Abelo Monitoring (StatsD)",
   "uid": "abelo-monitoring-statsd",
-  "version": 1,
-  "weekStart": ""
+  "version": 2,
+  "weekStart": "",
+  "theme": "light"
 }

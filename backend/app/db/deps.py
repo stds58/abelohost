@@ -1,3 +1,7 @@
+"""
+Зависимости FastAPI для работы c базой данных (SQLAlchemy и asyncpg).
+"""
+
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -20,6 +24,21 @@ async_session_maker = create_session_factory(settings.DATABASE_URL)
 
 @asynccontextmanager
 async def connection_sqlalchemy(commit: bool = True) -> AsyncGenerator[AsyncSession]:
+    """Контекстный менеджер для сессии SQLAlchemy c управлением транзакциями.
+
+    Args:
+        commit: Если True, автоматически коммитит транзакцию при успешном выходе из контекста.
+
+    Yields:
+        AsyncSession: Асинхронная сессия SQLAlchemy.
+
+    Raises:
+        IntegrityError: При нарушении ограничений целостности (например, unique constraint).
+        OperationalError: При ошибках соединения c БД.
+        ConnectionRefusedError: Если сервер БД недоступен.
+        OSError: При системных ошибках ввода-вывода.
+        SQLAlchemyError: При других ошибках SQLAlchemy.
+    """
     async with get_session(async_session_maker) as session:
         try:
             yield session
@@ -44,8 +63,13 @@ async def connection_sqlalchemy(commit: bool = True) -> AsyncGenerator[AsyncSess
 
 
 def connection_sqlalchemy_dependency(commit: bool = True):
-    """
-    Фабрика зависимости для FastAPI, создающая асинхронную сессию
+    """Фабрика зависимости для FastAPI, создающая асинхронную сессию SQLAlchemy.
+
+    Args:
+        commit: Флаг автоматического коммита транзакции.
+
+    Returns:
+        Callable: Асинхронная функция-зависимость для FastAPI.
     """
 
     async def dependency() -> AsyncGenerator[AsyncSession]:
@@ -57,15 +81,23 @@ def connection_sqlalchemy_dependency(commit: bool = True):
 
 @asynccontextmanager
 async def connection_asyncpg() -> AsyncGenerator[asyncpg.Connection]:
-    """
-    Прямой доступ к asyncpg.Connection c управлением транзакцией.
+    """Прямой доступ к asyncpg.Connection c управлением транзакцией.
+
+    Yields:
+        asyncpg.Connection: Активное соединение asyncpg внутри транзакции.
+
     """
     async with asyncpg_db_client.get_connection() as conn, conn.transaction():
         yield conn
 
 
 def connection_asyncpg_dependency():
-    """Фабрика зависимости FastAPI для asyncpg connection"""
+    """Фабрика зависимости FastAPI для получения соединения asyncpg.
+
+    Returns:
+        Callable: Асинхронная функция-зависимость для FastAPI.
+
+    """
 
     async def dependency() -> AsyncGenerator[asyncpg.Connection]:
         async with connection_asyncpg() as conn:

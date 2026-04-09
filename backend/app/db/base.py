@@ -1,6 +1,5 @@
 """
 Рекомендуемые соглашения для именования constraints
-Это особенно важно для Alembic (миграции)
 
 "ix": "ix_%(column_0_label)s",  # индексы
 "uq": "uq_%(table_name)s_%(column_0_name)s",  # уникальные constraints

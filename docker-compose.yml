@@ -38,8 +38,8 @@ services:
       - SETGID
       - SETUID
     volumes:
-      #- ./backend/:/opt/abelo/backend/:ro # в проде убрать,тк На Windows это работает через файловую прослойку (WSL2 gRPC или SMB). Для Python-приложения с тысячами мелких файлов (.py, .pyc) это критически медленно
-      #- ./backend/alembic/versions/:/opt/abelo/backend/alembic/versions/:rw
+      - ./backend/:/opt/abelo/backend/:ro # в проде убрать,тк На Windows это работает через файловую прослойку (WSL2 gRPC или SMB). Для Python-приложения с тысячами мелких файлов (.py, .pyc) это критически медленно
+      - ./backend/alembic/versions/:/opt/abelo/backend/alembic/versions/:rw
       - app-cache:/opt/abelo/.cache
     ports:
       - "8000:8000"

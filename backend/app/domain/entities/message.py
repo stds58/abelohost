@@ -1,3 +1,7 @@
+"""
+Доменная сущность Message
+"""
+
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -11,17 +15,17 @@ from ..value_objects.message import MessageId, Text
 @dataclass(frozen=True)
 class Message:
     """
-    Доменная сущность сообщения
+    Доменная сущность сообщения.
+
+    Attributes:
+        id: Уникальный идентификатор сообщения.
+        created_at: Дата и время создания записи (UTC).
+        text: Текст сообщения.
     """
 
     id: MessageId
-    """Уникальный идентификатор сообщения"""
-
     created_at: datetime
-    """Дата и время создания записи (UTC)"""
-
     text: Text
-    """ """
 
     @classmethod
     def create(
@@ -30,10 +34,14 @@ class Message:
         message_id: MessageId,
         text: str,
     ) -> "Message":
-        """
-        Фабричный метод для создания нового сообщения.
+        """Фабричный метод для создания нового сообщения.
+
         Args:
+            message_id: Уникальный идентификатор сообщения (Value Object).
+            text: Текстовое содержимое сообщения.
+
         Returns:
+            Message: Новый экземпляр сущности Message.
         """
         return cls(
             id=message_id,

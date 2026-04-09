@@ -1,3 +1,7 @@
+"""
+Зависимости (Dependencies) для внедрения репозиториев в эндпоинты
+"""
+
 from typing import Annotated
 
 import asyncpg
@@ -21,25 +25,53 @@ from backend.app.infra.adapters.sql_alchemy_message_repository import (
 
 
 def get_sqlalchemy_repository_write(
-    # session: AsyncSession = Depends(connection_sqlalchemy_dependency(commit=True))
     session: Annotated[
         AsyncSession, Depends(connection_sqlalchemy_dependency(commit=True))
     ],
 ) -> MessageRepository:
+    """Получает репозиторий SQLAlchemy для операций записи.
+
+    Args:
+        session: Асинхронная сессия SQLAlchemy c авто-коммитом.
+
+    Returns:
+        MessageRepository: Экземпляр репозитория.
+    """
     return create_sqlalchemy_message_repository(session)
 
 
 def get_sqlalchemy_repository_read(
     session: AsyncSession = Depends(connection_sqlalchemy_dependency(commit=False)),
 ) -> MessageRepository:
+    """Получает репозиторий SQLAlchemy для операций чтения.
+
+    Args:
+        session: Асинхронная сессия SQLAlchemy без авто-коммита.
+
+    Returns:
+        MessageRepository: Экземпляр репозитория.
+    """
     return create_sqlalchemy_message_repository(session)
 
 
 def get_asyncpg_repository(
     conn: asyncpg.Connection = Depends(connection_asyncpg_dependency()),
 ) -> MessageRepository:
+    """Получает репозиторий на базе asyncpg.
+
+    Args:
+        conn: Активное соединение asyncpg внутри транзакции.
+
+    Returns:
+        MessageRepository: Экземпляр репозитория.
+    """
     return create_asyncpg_message_repository(conn)
 
 
 def get_in_memory_repository() -> MessageRepository:
+    """Получает репозиторий в памяти (для тестов).
+
+    Returns:
+        MessageRepository: Синглтон экземпляра InMemoryMessageRepository.
+    """
     return in_memory_message_repository_instance

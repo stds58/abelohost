@@ -1,3 +1,9 @@
+"""
+Эндпоинты для работы c сообщениями (Message API)
+"""
+
+import asyncio
+
 import orjson
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 
@@ -17,7 +23,6 @@ router = APIRouter()
 
 @router.post(
     "/process",
-    # response_model=ProcessResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Обработать данные c задержкой",
     description="Принимает JSON {data: str}, имитирует обработку (0.5s) и возвращает echo",
@@ -26,18 +31,27 @@ async def create_message(
     request: ProcessRequest,
     repo: CreateMessageUseCase = Depends(get_asyncpg_repository),
 ):
-    """
-    Принимает текст, создает доменную сущность и сохраняет в БД.
+    """Принимает текст, создает доменную сущность и сохраняет в БД.
     Симуляция обработки данных c фиксированной задержкой.
+
+    Args:
+        request: Тело запроса c полем data (str).
+        repo: Зависимость UseCase для создания сообщения.
+
+    Returns:
+        Response: JSON-ответ c данными созданного сообщения.
+
+    Raises:
+        HTTPException: 400 Bad Request, если текст пустой.
+        HTTPException: 500 Internal Server Error при непредвиденных ошибках.
     """
     try:
+        await asyncio.sleep(0.5)
         use_case = CreateMessageUseCase(repository=repo)
         message = await use_case.execute(text=request.data)
-
         return Response(
             content=orjson.dumps(message.to_dict()), media_type="application/json"
         )
-
     except EmptyTextError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -52,7 +66,6 @@ async def create_message(
 
 @router.get(
     "/message/{message_id}",
-    # response_model=MessageResponse,
     summary="Получить сообщение по ID",
     description="Возвращает сообщение, если оно существует",
 )
@@ -60,8 +73,19 @@ async def get_message(
     message_id: str,
     repo: GetMessageUseCase = Depends(get_asyncpg_repository),
 ):
-    """
-    Получает сообщение по UUID.
+    """Получает сообщение по UUID.
+
+    Args:
+        message_id: Строковый идентификатор сообщения (UUID).
+        repo: Зависимость UseCase для получения сообщения.
+
+    Returns:
+        Response: JSON-ответ c данными сообщения.
+
+    Raises:
+        HTTPException: 400 Bad Request, если формат ID невалиден.
+        HTTPException: 404 Not Found, если сообщение не найдено.
+        HTTPException: 500 Internal Server Error при непредвиденных ошибках.
     """
     try:
         structlog_logger.info("get_message", message_id=message_id, type="start")

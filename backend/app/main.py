@@ -1,10 +1,13 @@
+"""
+локальный запуск
+python backend/app/main.py
+"""
+
 from contextlib import asynccontextmanager
 
 import asyncpg
 from fastapi import Depends, FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
-
-# from prometheus_fastapi_instrumentator import Instrumentator
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -66,7 +69,6 @@ app = FastAPI(
 
 app.middleware("http")(structlog_middleware)
 
-# Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
 app.add_middleware(
     CORSMiddleware,
@@ -91,9 +93,10 @@ app.include_router(api_router)
 
 @app.get("/health", status_code=status.HTTP_200_OK)
 def healthcheck():
-    """
-    проверка доступности сервиса
-    :return:
+    """Проверка доступности сервиса (Healthcheck).
+
+    Returns:
+        dict: Статус сервиса и режим отладки.
     """
     structlog_logger.debug("healthcheck_requested")
     return {"status": "healthy", "DM": settings.DEBUG_MODE}
@@ -103,10 +106,14 @@ def healthcheck():
 async def get_db_info(
     session: AsyncSession = Depends(connection_sqlalchemy_dependency(commit=False)),
 ):
-    """
-    Возвращает информацию o текущем подключении к БД.
-    Использует сырую SQL-функцию PostgreSQL.
-    для теста ошибки result = await session.execute("SELECT CURRENT_USER, VERSION(), NOW()")
+    """Возвращает информацию o текущем подключении к БД через SQLAlchemy.
+    Использует сырую SQL-функцию PostgreSQL для проверки соединения.
+
+    Args:
+        session: Сессия SQLAlchemy.
+
+    Returns:
+        dict: Информация o пользователе, версии БД и текущем времени.
     """
     result = await session.execute(text("SELECT CURRENT_USER, VERSION(), NOW()"))
     row = result.fetchone()
@@ -124,8 +131,13 @@ async def get_db_info(
 async def get_db_info_asyncpg(
     conn: asyncpg.Connection = Depends(connection_asyncpg_dependency()),
 ):
-    """
-    Возвращает информацию o текущем подключении к БД через asyncpg.
+    """Возвращает информацию o текущем подключении к БД через asyncpg.
+
+    Args:
+        conn: Соединение asyncpg.
+
+    Returns:
+        dict: Информация o пользователе, версии БД и текущем времени.
     """
     row = await conn.fetchrow("SELECT CURRENT_USER, VERSION(), NOW()")
 
@@ -143,8 +155,6 @@ async def get_db_info_asyncpg(
 
 
 if __name__ == "__main__":
-    # локальный запуск
-    # python backend/app/main.py
     import os
     import subprocess
     import sys

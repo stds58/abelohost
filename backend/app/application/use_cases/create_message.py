@@ -1,4 +1,6 @@
-import asyncio
+"""
+Сценарий использования для создания нового сообщения.
+"""
 
 from uuid_extensions import uuid7
 
@@ -8,16 +10,23 @@ from backend.app.domain.value_objects.message import MessageId
 
 
 class CreateMessageUseCase:
-    """
-    Сценарий: Создать новое сообщение + Симуляция обработки данных c фиксированной задержкой.
+    """Use case для создания нового сообщения c симуляцией обработки.
 
-    Отвечает за:
-    1. Генерацию уникального идентификатора
-    2. Создание доменной сущности через фабричный метод
-    3. Сохранение через репозиторий
+    Отвечает за оркестрацию процесса создания:
+    1. Генерация уникального идентификатора (UUID7).
+    2. Создание доменной сущности через фабричный метод.
+    3. Сохранение сущности через репозиторий.
+
+    Attributes:
+        _repository: Экземпляр репозитория для сохранения данных.
     """
 
     def __init__(self, repository: MessageRepository):
+        """Инициализирует UseCase c переданным репозиторием.
+
+        Args:
+            repository: Реализация интерфейса MessageRepository.
+        """
         self._repository = repository
 
     async def execute(self, text: str) -> Message:
@@ -25,31 +34,17 @@ class CreateMessageUseCase:
         Выполняет сценарий создания сообщения.
 
         Args:
-            text: Текст сообщения (валидируется внутри домена)
+            text: Текст сообщения
 
         Returns:
-            Message: Newly created domain entity with generated ID and timestamp
+            Message: Созданная доменная сущность сообщения c ID и timestamp.
 
         Raises:
             EmptyTextError: Если текст пустой или содержит только пробелы
             MessageError: Если сообщение c таким ID уже существует (маловероятно для uuid7)
         """
 
-        # Симуляция latency
-        await asyncio.sleep(0.5)
-
-        # 1. Генерируем уникальный ID (uuid7 = время-сортируемый UUID)
-        # Можно использовать uuid.uuid4() если не нужна сортировка по времени
         new_id = MessageId.from_str(str(uuid7()))
-
-        # 2. Создаём сущность через фабричный метод домена
-        # Здесь сработает валидация текста (пустой? пробелы?)
-        # И автоматически проставится created_at
         message = Message.create(message_id=new_id, text=text)
-
-        # 3. Сохраняем через репозиторий
-        # Репозиторий выбросит исключение, если нарушена уникальность
         await self._repository.save(message)
-
-        # 4. Возвращаем созданную сущность
         return message
