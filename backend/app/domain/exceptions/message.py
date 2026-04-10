@@ -19,6 +19,10 @@ class MessageDoesNotExistError(MessageNotFoundError):
     Возникает, когда ожидается наличие сущности, но она не найдена.
     """
 
+    def __init__(self, message_id: str | None = None):
+        self.message_id = message_id
+        super().__init__(f"Message with id {message_id} not found")
+
 
 class EmptyTextError(MessageError):
     """Сообщение не может быть пустым"""
