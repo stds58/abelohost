@@ -24,7 +24,6 @@ class MessageRepository(ABC):
         Returns:
             Message | None: Доменная сущность или None, если не найдено.
         """
-        ...
 
     @abstractmethod
     async def save(self, message: Message) -> None:
@@ -33,4 +32,3 @@ class MessageRepository(ABC):
         Args:
             message: Доменная сущность сообщения.
         """
-        ...

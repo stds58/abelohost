@@ -59,8 +59,4 @@ async def get_session(session_factory):
         async with session_factory() as session:
             yield session
     except (TimeoutError, ConnectionRefusedError, OSError):
-        # await aerror(
-        #     "Ошибка (ConnectionRefusedError, OSError, asyncio.TimeoutError)",
-        #     error=str(exc),
-        # )
         raise

@@ -22,8 +22,7 @@ import structlog
 from fastapi import Request, Response
 from uuid_extensions import uuid7
 
-logger = structlog.get_logger()
-
+from backend.app.core.logging_config import logger as structlog_logger
 
 STATSD_HOST = "statsd-exporter"
 STATSD_PORT = 8125
@@ -49,7 +48,7 @@ def get_statsd_client():
                 host=STATSD_HOST, port=STATSD_PORT, prefix=prefix
             )
         except Exception as e:
-            logger.error("statsd_init_failed", error=str(e))
+            structlog_logger.error("statsd_init_failed", error=str(e))
             return None
     return _statsd_client
 
@@ -80,7 +79,7 @@ async def structlog_middleware(request: Request, call_next):
                 client.incr(f"http.requests.{request.method}.{response.status_code}")
                 client.timing("http.requests.duration", process_time)
             except Exception as e:
-                logger.warning("statsd_send_failed", error=str(e))
+                structlog_logger.warning("statsd_send_failed", error=str(e))
 
         response.headers["X-Request-ID"] = request_id
         return response

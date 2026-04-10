@@ -11,7 +11,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.app.api.v1.router import api_router
+from backend.app.api.v1.router import api_router as v1_api_router
+from backend.app.api.v2.router import api_router as v2_api_router
+from backend.app.api.v3.router import api_router as v3_api_router
 from backend.app.core.config import settings
 from backend.app.core.logging_config import logger as structlog_logger
 from backend.app.db.asyncpg_pool import asyncpg_db_client
@@ -19,6 +21,7 @@ from backend.app.db.deps import (
     connection_asyncpg_dependency,
     connection_sqlalchemy_dependency,
 )
+from backend.app.exceptions.handlers import register_exception_handlers
 from backend.app.infra.kafka.kafka_producer import kafka_log_producer
 from backend.app.middleware.logging import structlog_middleware
 
@@ -88,7 +91,10 @@ app.add_middleware(
     ],
 )
 
-app.include_router(api_router)
+app.include_router(v1_api_router)
+app.include_router(v2_api_router)
+app.include_router(v3_api_router)
+register_exception_handlers(app)
 
 
 @app.get("/health", status_code=status.HTTP_200_OK)

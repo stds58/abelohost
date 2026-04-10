@@ -48,6 +48,6 @@ class GetMessageUseCase:
         message = await self._repository.get_by_id(id_vo)
 
         if message is None:
-            raise MessageDoesNotExistError(f"Message with id {message_id} not found")
+            raise MessageDoesNotExistError(message_id=message_id)
 
         return message

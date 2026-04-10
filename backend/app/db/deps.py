@@ -9,15 +9,17 @@ import asyncpg
 from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-# from backend.app.exceptions.base import CustomInternalServerException
-# from backend.app.exceptions.db import (
-#     DatabaseConnectionException,
-#     IntegrityErrorException,
-#     SqlalchemyErrorException,
-# )
 from backend.app.core.config import settings
 from backend.app.db.asyncpg_pool import asyncpg_db_client
 from backend.app.db.session import create_session_factory, get_session
+from backend.app.exceptions.base import CustomInternalServerException
+from backend.app.exceptions.database import (
+    DatabaseConnectionError,
+    DatabaseConnectionException,
+    DatabaseSchemaError,
+    IntegrityErrorException,
+    SqlalchemyErrorException,
+)
 
 async_session_maker = create_session_factory(settings.DATABASE_URL)
 
@@ -44,18 +46,18 @@ async def connection_sqlalchemy(commit: bool = True) -> AsyncGenerator[AsyncSess
             yield session
             if commit and session.in_transaction():
                 await session.commit()
-        except IntegrityError:
+        except IntegrityError as exc:
             if session.in_transaction():
                 await session.rollback()
-            raise  # IntegrityErrorException(detail=str(exc)) from exc
-        except OperationalError:
-            raise  # DatabaseConnectionException(detail=str(exc)) from exc
-        except (ConnectionRefusedError, OSError):
-            raise  # CustomInternalServerException(detail=str(exc)) from exc
-        except SQLAlchemyError:
+            raise IntegrityErrorException(str(exc)) from exc
+        except OperationalError as exc:
+            raise DatabaseConnectionException(str(exc)) from exc
+        except (ConnectionRefusedError, OSError) as exc:
+            raise CustomInternalServerException(detail=str(exc)) from exc
+        except SQLAlchemyError as exc:
             if session.in_transaction():
                 await session.rollback()
-            raise  # SqlalchemyErrorException(detail=str(exc)) from exc
+            raise SqlalchemyErrorException(str(exc)) from exc
         except Exception:
             if session.in_transaction():
                 await session.rollback()
@@ -87,8 +89,17 @@ async def connection_asyncpg() -> AsyncGenerator[asyncpg.Connection]:
         asyncpg.Connection: Активное соединение asyncpg внутри транзакции.
 
     """
-    async with asyncpg_db_client.get_connection() as conn, conn.transaction():
-        yield conn
+    try:
+        async with asyncpg_db_client.get_connection() as conn, conn.transaction():
+            yield conn
+    except asyncpg.exceptions.UndefinedTableError as e:
+        raise DatabaseSchemaError("Database schema is invalid. Run migrations.") from e
+    except asyncpg.exceptions.CannotConnectNowError as e:
+        raise DatabaseConnectionError("Database is not ready yet.") from e
+    except asyncpg.exceptions.PostgresError as e:
+        raise DatabaseConnectionError(
+            f"Database operation failed: {e.__class__.__name__}"
+        ) from e
 
 
 def connection_asyncpg_dependency():

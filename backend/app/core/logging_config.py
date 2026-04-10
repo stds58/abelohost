@@ -38,13 +38,15 @@ def kafka_sink_processor(_logger, _method_name, event_dict):
 
     """
     if kafka_log_producer.is_running:
-        log_entry = {
-            "event": event_dict.get("event"),
-            "level": event_dict.get("level"),
-            "timestamp": event_dict.get("timestamp"),
-            "request_id": event_dict.get("request_id"),
-            "service": "abelo-app",
-        }
+        # log_entry = {
+        #     "event": event_dict.get("event"),
+        #     "level": event_dict.get("level"),
+        #     "timestamp": event_dict.get("timestamp"),
+        #     "request_id": event_dict.get("request_id"),
+        #     "service": "abelo-app",
+        # }
+        log_entry = event_dict.copy()
+        log_entry["service"] = "abelo-app"
         kafka_log_producer.send_log_sync(log_entry)
 
     raise structlog.DropEvent
