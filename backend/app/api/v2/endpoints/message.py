@@ -7,7 +7,10 @@ import asyncio
 import orjson
 from fastapi import APIRouter, Depends, Response, status
 
-from backend.app.api.v1.deps import get_asyncpg_repository
+from backend.app.api.v1.deps import (
+    get_sqlalchemy_repository_read,
+    get_sqlalchemy_repository_write,
+)
 from backend.app.api.v1.schemas.message import ProcessRequest
 from backend.app.application.use_cases.create_message import CreateMessageUseCase
 from backend.app.application.use_cases.get_message import GetMessageUseCase
@@ -24,7 +27,7 @@ router = APIRouter()
 )
 async def create_message(
     request: ProcessRequest,
-    repo: CreateMessageUseCase = Depends(get_asyncpg_repository),
+    repo: CreateMessageUseCase = Depends(get_sqlalchemy_repository_write),
 ):
     """Принимает текст, создает доменную сущность и сохраняет в БД.
     Симуляция обработки данных c фиксированной задержкой.
@@ -55,7 +58,7 @@ async def create_message(
 )
 async def get_message(
     message_id: str,
-    repo: GetMessageUseCase = Depends(get_asyncpg_repository),
+    repo: GetMessageUseCase = Depends(get_sqlalchemy_repository_read),
 ):
     """Получает сообщение по UUID.
 
