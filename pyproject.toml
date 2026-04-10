@@ -12,6 +12,7 @@ linter = [
     "pre-commit>=4.5.1",
     "pylint>=4.0.5",
     "ruff>=0.15.9",
+    "vulture>=2.16",
 ]
 main = [
     "aiokafka>=0.13.0",

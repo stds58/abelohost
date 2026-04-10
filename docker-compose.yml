@@ -1,10 +1,3 @@
-x-app-vars: &abelo-app-vars
-  DEBUG_MODE: ${DEBUG_MODE:-True}
-  SECRET_KEY_FILE: "/run/secrets/secret_key"
-  SESSION_MIDDLEWARE_SECRET_KEY_FILE: "/run/secrets/session_middleware_secret_key"
-  KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
-  GRANIAN_WORKERS: ${GRANIAN_WORKERS:-2}
-
 x-db-vars: &abelo-db-vars
   POSTGRES_USER: ${DB_USER:-admin}
   POSTGRES_DB: ${DB_NAME:-abelo_db}
@@ -27,55 +20,6 @@ x-security-defaults: &security-defaults
       hard: 8192
 
 services:
-  abelo-app:
-    container_name: abelo-app
-    build:
-      context: .
-      dockerfile: backend/Dockerfile
-    <<: *security-defaults
-    cap_add:
-      - CHOWN
-      - SETGID
-      - SETUID
-    volumes:
-      - ./backend/:/opt/abelo/backend/:ro # в проде убрать,тк На Windows это работает через файловую прослойку (WSL2 gRPC или SMB). Для Python-приложения с тысячами мелких файлов (.py, .pyc) это критически медленно
-      - ./backend/alembic/versions/:/opt/abelo/backend/alembic/versions/:rw
-      - app-cache:/opt/abelo/.cache
-    ports:
-      - "8000:8000"
-    environment:
-      <<: [*abelo-app-vars, *abelo-db-vars]
-    env_file:
-      - .env
-    secrets:
-      - db_password
-      - secret_key
-      - session_middleware_secret_key
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    depends_on:
-      abelo-db:
-        condition: service_healthy
-#      loki:
-#        condition: service_started
-#      kafka:
-#        condition: service_healthy
-    networks:
-      - abelo_network
-    deploy:
-      resources:
-        limits:
-          cpus: '6.0'
-          memory: 12G
-        reservations:
-          cpus: '0.25'
-          memory: 128M
-    restart: unless-stopped
-
   abelo-db:
     container_name: abelo-db
     image: postgres:18
@@ -137,8 +81,6 @@ services:
 volumes:
   pg_data:
     driver: local
-  app-cache:
-    driver: local
 
 networks:
   abelo_network:
@@ -147,7 +89,3 @@ networks:
 secrets:
   db_password:
     file: ./secrets/db_password.txt
-  secret_key:
-    file: ./secrets/secret_key.txt
-  session_middleware_secret_key:
-    file: ./secrets/session_middleware_secret_key.txt
