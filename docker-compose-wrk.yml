@@ -4,8 +4,8 @@ services:
     profiles:
       - load-test
     image: williamyeh/wrk
-    #command: [ "-t", "6", "-c", "96", "-d", "60s", "--latency", "http://abelo-app:8000/message/069d8189-4ea8-7774-8000-10cc2387202b" ]
-    command: [ "-t", "6", "-c", "96", "-d", "60s", "--latency", "-s", "/scripts/post.lua", "http://127.0.0.1:8000/process" ]
+    command: [ "-t", "6", "-c", "96", "-d", "600s", "--latency", "http://abelo-app:8000/v2/message/069d977c-d692-7326-8000-f816be8aef9e" ]
+    #command: [ "-t", "6", "-c", "96", "-d", "60s", "--latency", "-s", "/scripts/post.lua", "http://127.0.0.1:8000/process" ]
     volumes:
       - ./wrk_lua/post.lua:/scripts/post.lua:ro
     depends_on:

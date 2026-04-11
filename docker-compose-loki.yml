@@ -9,8 +9,8 @@ services:
     container_name: abelo-loki
     image: grafana/loki:3.0.0
     <<: *security-defaults
-    ports:
-      - "3100:3100"
+#    ports:
+#      - "3100:3100"
     command: -config.file=/etc/loki/local-config.yaml
     volumes:
       - ./observability/loki/local-config.yaml:/etc/loki/local-config.yaml:ro

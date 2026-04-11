@@ -19,8 +19,8 @@ services:
     container_name: abelo-node-exporter
     image: prom/node-exporter:latest
     <<: *security-defaults
-    ports:
-      - "9100:9100"
+#    ports:
+#      - "9100:9100"
     volumes:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
