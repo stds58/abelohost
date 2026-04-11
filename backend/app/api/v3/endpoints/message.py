@@ -49,7 +49,9 @@ async def create_message(
         api_version="v3 memory_repository",
     )
     return Response(
-        content=orjson.dumps(message.to_dict()), media_type="application/json"
+        content=orjson.dumps(message.to_dict()),
+        media_type="application/json",
+        status_code=status.HTTP_201_CREATED,
     )
 
 

@@ -50,7 +50,9 @@ async def create_message(
         "create_message", message_id=message.id.value, api_version="v2 sqlalchemy"
     )
     return Response(
-        content=orjson.dumps(message.to_dict()), media_type="application/json"
+        content=orjson.dumps(message.to_dict()),
+        media_type="application/json",
+        status_code=status.HTTP_201_CREATED,
     )
 
 

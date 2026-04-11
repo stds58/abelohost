@@ -16,5 +16,5 @@ def healthcheck():
     Returns:
         dict: Статус сервиса и режим отладки.
     """
-    structlog_logger.debug("healthcheck_requested")
+    structlog_logger.info("healthcheck_requested")
     return {"status": "healthy"}
