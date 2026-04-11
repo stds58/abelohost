@@ -42,11 +42,11 @@ class MessageDoesNotExistHTTPError(MessageNotFoundHTTPError):
 
 
 class EmptyTextHTTPError(MessageHTTPError):
-    """400: Пустой текст сообщения."""
+    """422: Пустой текст сообщения."""
 
     def __init__(self):
         super().__init__(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Message text cannot be empty or whitespace only",
         )
 
