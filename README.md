@@ -659,6 +659,7 @@ uv run vulture backend/ vulture-whitelist.py
 запустить тесты для модуля identity (подставить свой модуль)
 
     pytest backend/ -v
+    pytest backend/tests/
 
 запустить тесты для файла test_identity_api.py с выводом принтов из теста
 
