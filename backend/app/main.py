@@ -5,22 +5,17 @@ python backend/app/main.py
 
 from contextlib import asynccontextmanager
 
-import asyncpg
-from fastapi import Depends, FastAPI, status
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
+from prometheus_fastapi_instrumentator import Instrumentator
 
+from backend.app.api.system.router import api_router as system_router
 from backend.app.api.v1.router import api_router as v1_api_router
 from backend.app.api.v2.router import api_router as v2_api_router
 from backend.app.api.v3.router import api_router as v3_api_router
 from backend.app.core.config import settings
 from backend.app.core.logging_config import logger as structlog_logger
 from backend.app.db.asyncpg_pool import asyncpg_db_client
-from backend.app.db.deps import (
-    connection_asyncpg_dependency,
-    connection_sqlalchemy_dependency,
-)
 from backend.app.exceptions.handlers import register_exception_handlers
 from backend.app.infra.kafka.kafka_producer import kafka_log_producer
 from backend.app.middleware.logging import structlog_middleware
@@ -91,73 +86,13 @@ app.add_middleware(
     ],
 )
 
+app.include_router(system_router)
 app.include_router(v1_api_router)
 app.include_router(v2_api_router)
 app.include_router(v3_api_router)
 register_exception_handlers(app)
-
-
-@app.get("/health", status_code=status.HTTP_200_OK)
-def healthcheck():
-    """Проверка доступности сервиса (Healthcheck).
-
-    Returns:
-        dict: Статус сервиса и режим отладки.
-    """
-    structlog_logger.debug("healthcheck_requested")
-    return {"status": "healthy", "DM": settings.DEBUG_MODE}
-
-
-@app.get("/check_sqlalchemy_db-info")
-async def get_db_info(
-    session: AsyncSession = Depends(connection_sqlalchemy_dependency(commit=False)),
-):
-    """Возвращает информацию o текущем подключении к БД через SQLAlchemy.
-    Использует сырую SQL-функцию PostgreSQL для проверки соединения.
-
-    Args:
-        session: Сессия SQLAlchemy.
-
-    Returns:
-        dict: Информация o пользователе, версии БД и текущем времени.
-    """
-    result = await session.execute(text("SELECT CURRENT_USER, VERSION(), NOW()"))
-    row = result.fetchone()
-    if row:
-        current_user, version, now = row
-        return {
-            "db_user": current_user,
-            "db_version": version,
-            "current_time": now.isoformat(),
-        }
-    return {"error": "No data"}
-
-
-@app.get("/check_asyncpg_db-info")
-async def get_db_info_asyncpg(
-    conn: asyncpg.Connection = Depends(connection_asyncpg_dependency()),
-):
-    """Возвращает информацию o текущем подключении к БД через asyncpg.
-
-    Args:
-        conn: Соединение asyncpg.
-
-    Returns:
-        dict: Информация o пользователе, версии БД и текущем времени.
-    """
-    row = await conn.fetchrow("SELECT CURRENT_USER, VERSION(), NOW()")
-
-    if row:
-        current_user = row["current_user"]
-        version = row["version"]
-        now = row["now"]
-
-        return {
-            "db_user": current_user,
-            "db_version": version,
-            "current_time": now.isoformat(),
-        }
-    return {"error": "No data"}
+if settings.DEBUG_MODE:
+    Instrumentator().instrument(app).expose(app)
 
 
 if __name__ == "__main__":
