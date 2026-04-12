@@ -71,18 +71,22 @@ app.middleware("http")(structlog_middleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "*",
+        "127.0.0.1:8000",
+        "127.0.0.1:12345",
+        "127.0.0.1:3000",
+        "127.0.0.1:9090",
+        "localhost:8000",
+        "localhost:12345",
+        "localhost:3000",
+        "localhost:9090",
     ],
     allow_credentials=False,
     allow_methods=[
         "GET",
         "POST",
-        "DELETE",
-        "PATCH",
     ],
     allow_headers=[
         "Content-Type",
-        "Authorization",
     ],
 )
 

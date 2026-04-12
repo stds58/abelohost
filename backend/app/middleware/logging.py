@@ -23,6 +23,7 @@ from fastapi import Request, Response
 from uuid_extensions import uuid7
 
 from backend.app.core.logging_config import logger as structlog_logger
+from backend.app.utile.parsing_path import parse_path
 
 STATSD_HOST = "statsd-exporter"
 STATSD_PORT = 8125
@@ -77,7 +78,12 @@ async def structlog_middleware(request: Request, call_next):
         if client:
             try:
                 client.incr(f"http.requests.{request.method}.{response.status_code}")
-                client.timing("http.requests.duration", process_time)
+
+                safe_path = parse_path(request)
+
+                metric_name = f"http.requests.duration.{request.method}.{safe_path}"
+
+                client.timing(metric_name, process_time)
             except Exception as e:
                 structlog_logger.warning("statsd_send_failed", error=str(e))
 
