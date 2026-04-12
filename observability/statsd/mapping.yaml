@@ -10,11 +10,13 @@ mappings:
       method: "$2"
       status_code: "$3"
 
-  - match: "abelo_app\\.worker_([^.]*)\\.http\\.requests\\.duration"
+  - match: "abelo_app\\.worker_([^.]*)\\.http\\.requests\\.duration\\.([^.]+)\\.(.+)"
     match_type: regex
-    name: "http_request_duration_seconds"
+    name: "http_request_duration_seconds_by_path"
     match_metric_type: "timer"
     observer_type: histogram
-    buckets: [0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0]
+    buckets: [ 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0 ]
     labels:
       worker_pid: "$1"
+      method: "$2"
+      path: "$3"
