@@ -4,16 +4,16 @@ groups:
       - alert: HighRequestLatency
         expr: |
           histogram_quantile(0.95, 
-            sum by (le, method) (
-              rate(http_request_duration_seconds_bucket{job="statsd-exporter"}[5m])
+            sum by (le, path) (
+              rate(http_request_duration_seconds_by_path_bucket{job="statsd-exporter"}[1m])
             )
-          ) > 1
-        for: 1m
+          ) >= 0.5
+        for: 1s
         labels:
           severity: warning
         annotations:
-          summary: "High latency detected"
-          description: "Алерт на высокую задержку (P95 > 1 секунды) 95th percentile latency is above 1s for method {{ $labels.method }}. Current value: {{ $value }}s"
+          summary: "High latency detected (>0.5s)"
+          description: "95th percentile latency is above 0.5s for path {{ $labels.path }}. Current value: {{ $value }}s"
 
       - alert: HighErrorRate
         expr: |
@@ -29,4 +29,4 @@ groups:
           severity: critical
         annotations:
           summary: "High HTTP 5xx error rate"
-          description: "Алерт на ошибки (5xx) Error rate is {{ $value | humanizePercentage }} for method {{ $labels.method }}"
+          description: "Error rate is {{ $value | humanizePercentage }} for method {{ $labels.method }}"

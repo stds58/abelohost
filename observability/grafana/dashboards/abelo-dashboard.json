@@ -455,38 +455,14 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "mode": "thresholds"
           },
           "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 20,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
             },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
+            "inspect": false
           },
           "mappings": [],
           "thresholds": {
@@ -508,7 +484,38 @@
           },
           "unit": "s"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "path"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 100
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 10,
@@ -518,20 +525,24 @@
       },
       "id": 2,
       "options": {
-        "legend": {
-          "calcs": [
-            "mean",
-            "max"
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
           ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
+          "show": false
         },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Value"
+          }
+        ]
       },
+      "pluginVersion": "10.4.0",
       "targets": [
         {
           "datasource": {
@@ -539,27 +550,139 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{worker_pid=~\"$worker_pid\"}[5m])) by (le, method))",
-          "legendFormat": "P95 {{method}}",
-          "range": true,
+          "exemplar": false,
+          "expr": "max_over_time(histogram_quantile(0.95, sum by (le, method, path) (rate(http_request_duration_seconds_by_path_bucket[1m])))[1m:])",
+          "format": "table",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "__auto",
+          "range": false,
           "refId": "A"
+        }
+      ],
+      "title": "Top Slowest Endpoints (P95 Latency)",
+      "description": "Текущая задержка P95 по каждому пути. Отсортировано по убыванию. Красный фон > 1с, желтый > 0.5с.",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
         },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "severity"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "critical": {
+                        "color": "red",
+                        "index": 1
+                      },
+                      "warning": {
+                        "color": "yellow",
+                        "index": 0
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "alertname"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 30
+      },
+      "id": 35,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{worker_pid=~\"$worker_pid\"}[5m])) by (le, method))",
-          "hide": false,
-          "legendFormat": "P99 {{method}}",
-          "range": true,
-          "refId": "B"
+          "exemplar": false,
+          "expr": "ALERTS{alertstate=\"firing\"}",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "A"
         }
       ],
-      "title": "Latency Percentiles (P95 & P99)",
-      "description": "Агрегированная задержка. Если выбран 'All', показывает общую картину.",
-      "type": "timeseries"
+      "title": "Active Alerts",
+      "description": "Список активных алертов. Если пусто — проблем нет.",
+      "type": "table"
     },
     {
       "datasource": {
@@ -620,7 +743,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 30
+        "y": 36
       },
       "id": 25,
       "options": {
@@ -660,7 +783,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 39
+        "y": 45
       },
       "id": 30,
       "panels": [],
@@ -676,7 +799,7 @@
         "h": 15,
         "w": 24,
         "x": 0,
-        "y": 40
+        "y": 46
       },
       "id": 4,
       "options": {
@@ -787,9 +910,9 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Abelo Monitoring (StatsD)",
-  "uid": "abelo-monitoring-statsd",
-  "version": 2,
+  "title": "Abelo Monitoring (StatsD) - Updated",
+  "uid": "abelo-monitoring-statsd-updated",
+  "version": 3,
   "weekStart": "",
   "theme": "light"
 }
