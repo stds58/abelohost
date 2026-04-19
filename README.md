@@ -154,8 +154,6 @@
 ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-D71F00?style=for-the-badge&logo=sqlalchemy&logoColor=white)
 ![asyncpg](https://img.shields.io/badge/asyncpg-555555?style=for-the-badge&logo=postgresql&logoColor=white)
 ![Apache Kafka](https://img.shields.io/badge/Apache%20Kafka-231F20?style=for-the-badge&logo=apache-kafka&logoColor=white)
-![RabbitMQ](https://img.shields.io/badge/RabbitMQ-FF6600?style=for-the-badge&logo=rabbitmq&logoColor=white)
-![Redis](https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white)
 ![StatsD](https://img.shields.io/badge/StatsD-555555?style=for-the-badge&logo=datadog&logoColor=white)
 ![Node Exporter](https://img.shields.io/badge/Node_Exporter-555555?style=for-the-badge&logo=linux&logoColor=white)
 ![Telegraf](https://img.shields.io/badge/Telegraf-22A699?style=for-the-badge&logo=influxdb&logoColor=white)
